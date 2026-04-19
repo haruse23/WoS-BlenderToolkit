@@ -11,7 +11,7 @@ and it could very possibly work on other untested versions of Blender, especiall
 
 - Convert the game's texture format (.wrap.tex) to DDS and vice versa (drag-and-drop feature)
 
-Use latest version of [WebOfShadowsTools](https://github.com/kirbystealer/WebOfShadowsTools) to extract said files
+Use latest version of kirbystealer's [WebOfShadowsTools](https://github.com/kirbystealer/WebOfShadowsTools) or Devryx's [Toolkit](https://github.com/Devryx505/web-of-shadows-tools-wos-tools-) to extract said files
 
 - The addon presents an extra feature which you can find in the side-panel. Press N to open Blender's side-panel, then go to the WOS Tools tab, there you can find the Rename Vertex Groups Utility.
 	- Use this utility to rename a model's vertex groups from the "bone_{index}" naming to the real bone names imported with the skeleton (Armature needs to be in same collection or the utility will raise an error)
