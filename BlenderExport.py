@@ -351,7 +351,7 @@ def ExportModel(collection, filepath, mesh_objects):
             wrap_external.dwExpectedIndexExternal = 4294967295 # FF FF FF FF bytes in decimal, interpreted as 4-byte unsigned int
             wrap_external.dwPointerTargetExternal = (model_header_start + 20) - wrap_external.PointerTargetExternalStartList[1]
         
-        wrap_external.WriteWRAPSectionExternalPatch(out)
+            wrap_external.WriteWRAPSectionExternalPatch(out)
             
         # MAT
         for m in range(mesh_count):
