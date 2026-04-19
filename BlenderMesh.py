@@ -67,13 +67,14 @@ class BlenderMeshExtractor:
         # --------------------------------------------------
         self.vertex_map = {}
 
-        def vertex_key(pos, normal, uvs, colors, bi, bw, tangent, binormal):
+        def vertex_key(pos, normal, uv, color, bi, bw, tangent, binormal):
             return (
                 tuple(pos),
                 tuple(normal),
 
-                tuple(tuple(uv) for uv in uvs),
-                tuple(tuple(col) for col in colors),
+                tuple(uv),
+                tuple(color),
+             
 
                 tuple(bi),
                 tuple(bw),
@@ -116,31 +117,22 @@ class BlenderMeshExtractor:
         # STEP 6: TRIANGLE EXTRACTION
         # --------------------------------------------------
         
+        uv_layers = [
+            [tuple(layer.data[i].uv) for i in range(len(mesh.loops))]
+            for layer in mesh.uv_layers
+        ]
+
+        color_layers = [
+            [tuple(layer.data[i].color) for i in range(len(mesh.loops))]
+            for layer in mesh.color_attributes
+        ]
+
         if mesh.uv_layers.active:
             mesh.calc_tangents()
 
-        # --- Precompute per‑vertex UVs (multi‑layer) ---
-        vertex_uvs = [[] for _ in range(len(mesh.vertices))]
-        for layer in mesh.uv_layers:
-            vert_to_uv = {}
-            for loop in mesh.loops:
-                vidx = loop.vertex_index
-                if vidx not in vert_to_uv:          # first occurrence
-                    vert_to_uv[vidx] = layer.data[loop.index].uv[:]
-            for vidx, uv in vert_to_uv.items():
-                vertex_uvs[vidx].append(uv)
+        
 
-        # --- Precompute per‑vertex colors (multi‑layer) ---
-        vertex_colors = [[] for _ in range(len(mesh.vertices))]
-        for layer in mesh.color_attributes:
-            vert_to_color = {}
-            for loop in mesh.loops:
-                vidx = loop.vertex_index
-                if vidx not in vert_to_color:
-                    vert_to_color[vidx] = layer.data[loop.index].color[:]
-            for vidx, col in vert_to_color.items():
-                vertex_colors[vidx].append(col)
-
+                
         # --- Now iterate over triangles ---
         for tri in mesh.loop_triangles:
             tri_indices = []
@@ -176,18 +168,19 @@ class BlenderMeshExtractor:
                 # Tangent space
                 tangent = loop.tangent.copy()
                 bitangent_sign = loop.bitangent_sign
-                binormal = normal.cross(tangent) * bitangent_sign
+                binormal = normal.cross(tangent) * -bitangent_sign
+                
+                vertex_uv = [uv_layers[l][loop_index] for l in range(len(uv_layers))]
+                vertex_color = [color_layers[l][loop_index] for l in range(len(color_layers))]
 
-                # Correct per‑vertex UVs and colors for THIS vertex
-                uv_list = vertex_uvs[vidx]      # list of tuples, one per UV layer
-                color_list = vertex_colors[vidx] # list of tuples, one per color layer
+
 
                 # Dedup key
                 key = vertex_key(
                     pos,
                     normal,
-                    uv_list,        
-                    color_list,     
+                    vertex_uv,        
+                    vertex_color,     
                     bi,
                     bw,
                     tangent,
@@ -203,8 +196,8 @@ class BlenderMeshExtractor:
                     normals.append(normal.copy())
                     tangents.append(tangent)
                     binormals.append(binormal)
-                    uvs.append(uv_list)          # store only this vertex's UVs
-                    colors.append(color_list)    # store only this vertex's colors
+                    uvs.append(vertex_uv)          # store only this vertex's UVs
+                    colors.append(vertex_color)    # store only this vertex's colors
                     blend_indices.append(bi)
                     blend_weights.append(bw)
                 else:
