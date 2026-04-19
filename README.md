@@ -29,6 +29,8 @@ Use latest version of [WebOfShadowsTools](https://github.com/kirbystealer/WebOfS
 
 - For custom model ports, rename your materials to the name of any material file the original model uses, full name could work but preferred to only take the hash part, like: `0x9E8F3E7F`
 
+- It is advised to use Data Transfer modifier to transfer weights from original models to modded ones, use Replace as Mix Mode and a Mapping of Nearest Vertex
+
 - Each submesh needs a vertex color attribute of some value, use Face Corner and Byte Color when creating the attribute, then make it White if you want fully opaque vertex color
 	- If you don't set a vertex color, the model will look complete black in-game
 	
