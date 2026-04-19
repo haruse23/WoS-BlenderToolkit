@@ -1,4 +1,4 @@
-<img width="420" height="293" alt="image" src="https://github.com/user-attachments/assets/50bf27e1-1647-4ac5-8510-da38d4187519" /># 1.0.0
+# 1.0.0
 This toolkit is a Blender addon/plugin for the video game Spider-Man: Web of Shadows
 
 This addon is designed on Blender 4.5.0 mainly, then compatibility has been tested and confirmed for Blender 5.0.0
