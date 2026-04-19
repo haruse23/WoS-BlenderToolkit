@@ -46,7 +46,7 @@ Use latest version of [WebOfShadowsTools](https://github.com/kirbystealer/WebOfS
 
 Reasoning:
 - Blender doesn't use Triangle Strips, which is the Primitive Type used in almost all the game's original models for face polygons, so they need to be converted to normal Triangle List for Blender to consume.
-  - However, the default export setting in this addon is to use Triangle List, which luckily the game can accept to consume them if a certain field in the data is tweaked to a value of 4.
+  - However, the default export setting in this addon is to use Triangle List, which luckily the game can accept to consume if a certain field in the data is tweaked to a value of 4.
 	
 
 
