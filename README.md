@@ -1,4 +1,4 @@
-# 1.0.0
+<img width="420" height="293" alt="image" src="https://github.com/user-attachments/assets/50bf27e1-1647-4ac5-8510-da38d4187519" /># 1.0.0
 This toolkit is a Blender addon/plugin for the video game Spider-Man: Web of Shadows
 
 This addon is designed on Blender 4.5.0 mainly, then compatibility has been tested and confirmed for Blender 5.0.0
@@ -26,6 +26,8 @@ Use latest version of [WebOfShadowsTools](https://github.com/kirbystealer/WebOfS
 
 # Notes:
 - Max vertex groups count for each submesh is 48, otherwise the mesh deformation will look off
+
+- Rename your materials to the name of the material file you are gonna be replacing/using, full name could work but preferred to only take the hash part, like: `0x9E8F3E7F`
 
 - Each submesh needs a vertex color attribute of some value, use Face Corner and Byte Color when creating the attribute, then make it White if you want fully opaque vertex color
 	- If you don't set a vertex color, the model will look complete black in-game
