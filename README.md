@@ -56,3 +56,5 @@ Reasoning:
 
 # Credits: 
 - kirbystealer for `get_string_lookup.py` and `stringtable_pcapk.zip`
+
+Join the [Web of Shadows](https://discord.gg/NftyUNJw) discord server for any questions
