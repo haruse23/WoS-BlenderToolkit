@@ -443,7 +443,9 @@ def FetchBlenderData(mesh_objects):
         for bone_index, vg_index in pairs:
             mapping[vg_index] = len(palette)  # NEW compact index
             palette.append(bone_index)
-
+            
+        obj.to_mesh_clear()
+        
         return {
             "bone_palette": palette,
             "bone_mapping": mapping
@@ -496,7 +498,7 @@ def FetchBlenderData(mesh_objects):
             "bounds": compute_bounds(positions),
             "attributes": build_attributes(mesh_dict, BonePaletteCount),
             "bone_data": bone_data,
-            "vertex_count": len(blender_mesh.vertex_map),
+            "vertex_count": len(mesh_dict["positions"]),
             "triangles": mesh_dict["triangle_list"],
             "skeleton_name": skeleton_name,
             "material_name": material_name

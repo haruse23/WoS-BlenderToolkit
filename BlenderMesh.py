@@ -67,20 +67,18 @@ class BlenderMeshExtractor:
         # --------------------------------------------------
         self.vertex_map = {}
 
-        def vertex_key(pos, normal, uv, color, bi, bw, tangent, binormal):
+        def vertex_key(pos, uv, bi, bw):
             return (
                 tuple(pos),
-                tuple(normal),
+                
 
                 tuple(uv),
-                tuple(color),
+            
              
 
                 tuple(bi),
                 tuple(bw),
 
-                tuple(tangent),
-                tuple(binormal),
             )
 
         """# --- COMPUTING BONE PALETTE ---
@@ -142,7 +140,7 @@ class BlenderMeshExtractor:
                 v = mesh.vertices[vidx]
 
                 pos = obj.matrix_world @ v.co
-                normal = tuple(mesh.vertex_normals[vidx].vector)
+                normal = mesh.vertex_normals[vidx].vector
                 
                 
                 if scene.flip_vertex_normals:
@@ -168,50 +166,41 @@ class BlenderMeshExtractor:
                 # Tangent space
                 tangent = loop.tangent.copy()
                 bitangent_sign = loop.bitangent_sign
-                binormal = normal.cross(tangent) * -bitangent_sign
+                binormal = normal.cross(tangent) * bitangent_sign
                 
                 vertex_uv = [uv_layers[l][loop_index] for l in range(len(uv_layers))]
                 vertex_color = [color_layers[l][loop_index] for l in range(len(color_layers))]
 
 
 
-                # Dedup key
-                key = vertex_key(
-                    pos,
-                    normal,
-                    vertex_uv,        
-                    vertex_color,     
-                    bi,
-                    bw,
-                    tangent,
-                    binormal
-                )
-
+                
+                key = vertex_key(pos, vertex_uv, bi, bw)
+                
                 # Emit vertex
                 if key not in self.vertex_map:
-                    idx = len(self.vertex_map)
+                    idx = len(positions)
                     self.vertex_map[key] = idx
 
                     positions.append(pos.copy())
                     normals.append(normal.copy())
                     tangents.append(tangent)
                     binormals.append(binormal)
-                    uvs.append(vertex_uv)          # store only this vertex's UVs
-                    colors.append(vertex_color)    # store only this vertex's colors
+                    uvs.append(vertex_uv)
+                    colors.append(vertex_color)
                     blend_indices.append(bi)
                     blend_weights.append(bw)
                 else:
                     idx = self.vertex_map[key]
-
+                
                 tri_indices.append(idx)
-
+                
             triangles.append(tri_indices)
 
-
+        obj.to_mesh_clear()
         # --------------------------------------------------
         # STEP 7: STRIPIFY
         # --------------------------------------------------
-        triangle_strip = make_triangle_strip(triangles, len(self.vertex_map))
+        triangle_strip = make_triangle_strip(triangles, len(positions))
         
         # --------------------------------------------------
         # STEP 8: RETURN EVERYTHING
