@@ -16,9 +16,9 @@ Use latest version of kirbystealer's [WebOfShadowsTools](https://github.com/kirb
 	- Use this utility to rename a model's vertex groups from the "bone_{index}" naming to the real bone names imported with the skeleton (Armature needs to be in same collection or the utility will raise an error)
 
 - The addon also presents some options on importing/exporting model format, which are:
-    - Flip UV V-Axis 
-    - Reverse Triangle Winding Order
-    - Convert to Triangle List
+	- Flip UV V-Axis
+	- Reverse Triangle Winding Order
+	- Convert to Triangle List
 	
 
 
