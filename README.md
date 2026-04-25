@@ -54,7 +54,7 @@ Reasoning:
 - Blender doesn't use Triangle Strips, which is the Primitive Type used in almost all the game's original models for face polygons, so they need to be converted to normal Triangle List for Blender to consume.
   - However, the default export setting in this addon is to use Triangle List, which luckily the game can accept to consume if a certain field in the data is tweaked to a value of 4.
 
-- Apply scale to the model before exporting (especially if the mesh object has non-uniform scale, which means different scale values for each of X, Y, Z axes), toolkit handles applying the rest of tranforms
+- Apply scale to the model before exporting, toolkit handles applying the rest of tranforms
 	
 #
 📦 Recommended Model Import Settings
