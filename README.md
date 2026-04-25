@@ -1,4 +1,3 @@
-# 1.0.0
 This toolkit is a Blender addon/plugin for the video game Spider-Man: Web of Shadows
 
 This addon is designed on Blender 4.5.0 mainly, then compatibility has been tested and confirmed for Blender 5.0.0
@@ -41,20 +40,41 @@ Use latest version of kirbystealer's [WebOfShadowsTools](https://github.com/kirb
 	
 - It is advised to use the default values of the Import Options for original game models and models that have been tweaked to match the game settings when exported
 
-- For custom model ports, try tweaking the Export Options to match the best result for you in-game
-	- If textures don't look right, use the Flip UV V-Axis option
-	- If model looks transparent/see-through, use the Flip Face Normals option
-	- If model lighting/shading looks off, use the Flip Vertex Normals option
-		
 - It is advised to turn off the Convert Triangle Strips option on import for models that have been exported using this toolkit, so as not to double convert an already-ready Triangle List
 
 Reasoning:
 - Blender doesn't use Triangle Strips, which is the Primitive Type used in almost all the game's original models for face polygons, so they need to be converted to normal Triangle List for Blender to consume.
   - However, the default export setting in this addon is to use Triangle List, which luckily the game can accept to consume if a certain field in the data is tweaked to a value of 4.
+
+- Apply scale to the model before exporting, toolkit handles applying the rest of tranforms
 	
+#
+📦 Recommended Model Import Settings
+- ✔ Flip UV V-Axis
+- ✔ Flip Face Normals
+- ❌ Flip Vertex Normals (only if the model comes from the game directly, not exported through the addon)
+- ✔ Convert to Triangle List (only if the model comes from the game directly, not exported through the addon)
+
+📤 Recommended Model Export Settings
+- ✔ Flip UV V-Axis
+- ✔ Flip Face Normals
+#
 
 
 # Credits: 
 - kirbystealer for `get_string_lookup.py` and `stringtable_pcapk.zip`
 
 Join the [Web of Shadows](https://discord.gg/NftyUNJw) discord server for any questions
+
+# Changelog
+### 1.0.2
+- Fixed issues with TBN (Tangent, Bitangent, Normal) calculation and export from Blender
+- Fixed issues with axis orientation and handedness
+- Fixed issues with UVs after export from Blender
+- Better model import speed
+
+### 1.0.1
+- Minor changes and fixes
+
+### 1.0.0
+- Release
