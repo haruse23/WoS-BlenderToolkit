@@ -51,13 +51,12 @@ Reasoning:
 #
 📦 Recommended Model Import Settings
 - ✔ Flip UV V-Axis
-- ✔ Flip Face Normals
-- ❌ Flip Vertex Normals (only if the model comes from the game directly, not exported through the addon)
+- ✔ Reverse Triangle Winding Order
 - ✔ Convert to Triangle List (only if the model comes from the game directly, not exported through the addon)
 
 📤 Recommended Model Export Settings
 - ✔ Flip UV V-Axis
-- ✔ Flip Face Normals
+- ✔ Reverse Triangle Winding Order
 #
 
 
