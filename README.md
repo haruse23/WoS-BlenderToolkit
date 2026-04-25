@@ -8,7 +8,7 @@ and it could very possibly work on other untested versions of Blender, especiall
 <img width="1920" height="1039" alt="4" src="https://github.com/user-attachments/assets/4652d35c-c55d-4286-9c84-b79e2e0124e0" />
 
 # Features:
-- Import and Export the game's model format (.wrap.mesh) to/from Blender (drag-and-drop supported for import)
+- Import/Export the game's model format (.wrap.mesh) to/from Blender (drag-and-drop supported for import)
 
 - Import/Export the game's skeleton format (.wrap.skel) to Blender (drag-and-drop supported for import)
 
@@ -65,7 +65,7 @@ Reasoning:
 
 # Credits: 
 - kirbystealer for `get_string_lookup.py` and `stringtable_pcapk.zip`
-- All the amazing Blender addons made for video-games, that I learned through reading them a lot, along with everybody who helped in my coding/reverse engineering journey so far on Discord especially. Special mention: NSACloud's [RE Mesh Editor](https://github.com/NSACloud/RE-Mesh-Editor/)
+- All the amazing Blender addons made for video-games, that I learned through reading them a lot, along with everybody who helped in my coding/reverse engineering journey so far, on Discord especially. Special mention: NSACloud's [RE Mesh Editor](https://github.com/NSACloud/RE-Mesh-Editor/)
   
 Join the [Web of Shadows](https://discord.gg/NftyUNJw) discord server for any questions
 
