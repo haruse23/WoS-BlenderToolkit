@@ -3,6 +3,10 @@ This toolkit is a Blender addon/plugin for the video game Spider-Man: Web of Sha
 This addon is designed on Blender 4.5.0 mainly, then compatibility has been tested and confirmed for Blender 5.0.0
 and it could very possibly work on other untested versions of Blender, especially 4.1+
 
+### [Download WoS BlenderToolkit](https://github.com/haruse23/WoS-BlenderToolkit/releases/latest)
+
+<img width="1920" height="1039" alt="4" src="https://github.com/user-attachments/assets/4652d35c-c55d-4286-9c84-b79e2e0124e0" />
+
 # Features:
 - Import and Export the game's model format (.wrap.mesh) to/from Blender (drag-and-drop supported for import)
 
@@ -19,8 +23,8 @@ Use latest version of kirbystealer's [WebOfShadowsTools](https://github.com/kirb
 	- Flip UV V-Axis
 	- Reverse Triangle Winding Order
 	- Convert to Triangle List
-	
 
+- Supported pixel formats: DXT1, DXT3, DXT5, D3DFMT_A8R8G8B8, D3DFMT_X8R8G8B8, D3DFMT_L8
 
 # Notes:
 - Max vertex groups count for each submesh is 48, otherwise the mesh deformation will look off
