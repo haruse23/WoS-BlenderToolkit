@@ -29,13 +29,12 @@ class BlenderMeshExtractor:
         
         scene = bpy.context.scene
         
-        if scene.flip_face_normals:
-            flip_face_normals_collection(bm)
+        if scene.flip_uv_v_avis:
+            flip_uv_v_axis(bm)
             
-        if scene.flip_uv:
-            flip_uv_collection(bm)
-        
         bm.normal_update()
+
+        
         bm.to_mesh(mesh)
         bm.free()
         
@@ -67,18 +66,16 @@ class BlenderMeshExtractor:
         # --------------------------------------------------
         self.vertex_map = {}
 
-        def vertex_key(pos, uv, bi, bw):
+        def vertex_key(pos, uv, normal):
             return (
                 tuple(pos),
                 
 
                 tuple(uv),
+                tuple(normal),
+         
+
             
-             
-
-                tuple(bi),
-                tuple(bw),
-
             )
 
         """# --- COMPUTING BONE PALETTE ---
@@ -124,77 +121,75 @@ class BlenderMeshExtractor:
             [tuple(layer.data[i].color) for i in range(len(mesh.loops))]
             for layer in mesh.color_attributes
         ]
-
-        if mesh.uv_layers.active:
-            mesh.calc_tangents()
-
         
 
-                
+        mesh.calc_tangents()
+        
         # --- Now iterate over triangles ---
-        for tri in mesh.loop_triangles:
-            tri_indices = []
-            for loop_index in tri.loops:
-                loop = mesh.loops[loop_index]
-                vidx = loop.vertex_index
-                v = mesh.vertices[vidx]
+        tri_indices = []
+        for loop in mesh.loops:
+            loop = mesh.loops[loop.index]
+            vidx = loop.vertex_index
+            v = mesh.vertices[vidx]
 
-                pos = obj.matrix_world @ v.co
-                normal = mesh.vertex_normals[vidx].vector
-                
-                
-                if scene.flip_vertex_normals:
-                        normal = (-normal[0], -normal[1], -normal[2])
-                        
-                normal = Vector(normal)
+            matrix = obj.matrix_world
+            rot = matrix.to_3x3().normalized()
 
-                # Skinning
-                groups = v.groups
-                groups = sorted(groups, key=lambda g: g.weight, reverse=True)[:4]
-                
-                bi = [self.bone_mapping.get(g.group, 0) for g in groups]
-                bw = [g.weight for g in groups]
-                
-                total = sum(bw)
-                if total > 0:
-                    bw = [w / total for w in bw]
-                    
-                while len(bi) < 4:
-                    bi.append(0)
-                    bw.append(0.0)
+            pos = matrix @ v.co # Apply all transforms to positions
+            normal = (rot @ loop.normal).normalized() # Apply rotation matrix to normals, after applying scale in Blender
+            # No need for inverse-transpose matrix
 
-                # Tangent space
-                tangent = loop.tangent.copy()
-                bitangent_sign = loop.bitangent_sign
-                binormal = normal.cross(tangent) * bitangent_sign
+            # Skinning
+            groups = v.groups
+            groups = sorted(groups, key=lambda g: g.weight, reverse=True)[:4]
+            
+            bi = [self.bone_mapping.get(g.group, 0) for g in groups]
+            bw = [g.weight for g in groups]
+            
+            total = sum(bw)
+            if total > 0:
+                bw = [w / total for w in bw]
                 
-                vertex_uv = [uv_layers[l][loop_index] for l in range(len(uv_layers))]
-                vertex_color = [color_layers[l][loop_index] for l in range(len(color_layers))]
+            while len(bi) < 4:
+                bi.append(0)
+                bw.append(0.0)
 
+            # Tangent space
+            tangent = loop.tangent.copy()
+            
+            bitangent_sign = loop.bitangent_sign
+            binormal = normal.cross(tangent) * bitangent_sign
+            
+            vertex_uv = [uv_layers[l][loop.index] for l in range(len(uv_layers))]
+            vertex_color = [color_layers[l][loop.index] for l in range(len(color_layers))]
 
+            
+            
+            
+            
+            key = vertex_key(pos, vertex_uv, normal)
+            
+            # Emit vertex
+            if key not in self.vertex_map:
+                idx = len(positions)
+                self.vertex_map[key] = idx
 
-                
-                key = vertex_key(pos, vertex_uv, bi, bw)
-                
-                # Emit vertex
-                if key not in self.vertex_map:
-                    idx = len(positions)
-                    self.vertex_map[key] = idx
-
-                    positions.append(pos.copy())
-                    normals.append(normal.copy())
-                    tangents.append(tangent)
-                    binormals.append(binormal)
-                    uvs.append(vertex_uv)
-                    colors.append(vertex_color)
-                    blend_indices.append(bi)
-                    blend_weights.append(bw)
-                else:
-                    idx = self.vertex_map[key]
-                
-                tri_indices.append(idx)
-                
-            triangles.append(tri_indices)
+                positions.append(pos.copy())
+                normals.append(normal.copy())
+                tangents.append(tangent)
+                binormals.append(binormal)
+                uvs.append(vertex_uv)
+                colors.append(vertex_color)
+                blend_indices.append(bi)
+                blend_weights.append(bw)
+            else:
+                idx = self.vertex_map[key]
+            
+            tri_indices.append(idx)
+            if len(tri_indices) == 3:
+                triangles.append(tri_indices)
+                tri_indices = []
+        
 
         obj.to_mesh_clear()
         # --------------------------------------------------

@@ -150,8 +150,9 @@ def convert_triangle_strips_to_triangle_list(indices):
         # Determine winding: flip every other triangle
         if i % 2 == 0:
             triangle_list.append([a, b, c])
-        else:
-            triangle_list.append([b, a, c])
+        if i % 2 == 1:
+            triangle_list.append([a, c, b])
+        
             
     return triangle_list
 

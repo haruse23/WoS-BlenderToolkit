@@ -27,6 +27,8 @@ def ExportModel(collection, filepath, mesh_objects):
         mesh_count = len(mesh_objects)
         
         data = FetchBlenderData(mesh_objects)
+        
+        scene = bpy.context.scene
              
         ############################################################
         # Writing Wrap Section (Header)
@@ -265,6 +267,9 @@ def ExportModel(collection, filepath, mesh_objects):
             index_buffer_start_list.append(out.tell())
             
             index_buffer.Indices = [i for tri in triangles for i in tri]
+            
+            if scene.reverse_winding_order:
+                index_buffer.Indices = reverse_winding_order_export(index_buffer.Indices)
             
             index_buffer.WriteIndices(out, vertex_count)
             

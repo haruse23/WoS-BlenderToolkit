@@ -25,7 +25,7 @@ def ImportModel(filepath):
         
         indices = Index_Buffers[m].Indices
         
-        if scene.convert_triangle_strips:
+        if scene.convert_to_triangle_list:
             triangle_faces = convert_triangle_strips_to_triangle_list(indices)
         
         else:
@@ -33,6 +33,9 @@ def ImportModel(filepath):
                 (indices[i], indices[i+1], indices[i+2])
                 for i in range(0, len(indices), 3)
             ]
+            
+        if scene.reverse_winding_order:
+            triangle_faces = reverse_winding_order_import(triangle_faces)
         
         mesh = bpy.data.meshes.new(f"SMWOS_Mesh_{m}")
         obj = bpy.data.objects.new(f"SMWOS_MeshObject_{m}", mesh)
@@ -51,57 +54,68 @@ def ImportModel(filepath):
                     
         
         # UVs
-        if Vertex_Buffers[m].TexCoords:
-            for key in Vertex_Buffers[m].TexCoords:
-                uv_layer = bm.loops.layers.uv.new("UVMap_" + str(key))
-                
-                uv_data = Vertex_Buffers[m].TexCoords[key]
-                for face in bm.faces:
-                    for loop in face.loops:
-                        vert_index = loop.vert.index
-                        u, v = uv_data[vert_index]
-                        loop[uv_layer].uv = (u, v)
-                    
-            
+        loop_uvs_per_channel = {}
 
-        print(len(Vertex_Buffers[m].Colors))
-        if Vertex_Buffers[m].Colors:
-            for key in Vertex_Buffers[m].Colors:
-                color_layer = bm.loops.layers.color.new("Col_" + str(key))
-                
-                color_data = Vertex_Buffers[m].Colors[key]
-                for face in bm.faces:
-                    for loop in face.loops:
-                        vertex_index = loop.vert.index
-                        loop[color_layer] = color_data[vertex_index]
+        for channel, uv_data in Vertex_Buffers[m].TexCoords.items():
+            flat = []
+
+            for face in triangle_faces:
+                for v in face:
+                    flat.append(uv_data[v])  # vertex → uv
+
+            loop_uvs_per_channel[channel] = flat
                         
+        for channel, flat_uvs in loop_uvs_per_channel.items():
+            uv_layer = bm.loops.layers.uv.new(f"UVMap_{channel}")
+
+            i = 0
+            for face in bm.faces:
+                for loop in face.loops:
+                    loop[uv_layer].uv = flat_uvs[i]
+                    i += 1
+            
+        # Colors
+        loop_colors_per_channel = {}
+
+        for channel, color_data in Vertex_Buffers[m].Colors.items():
+            flat = []
+
+            for face in triangle_faces:
+                for v in face:
+                    flat.append(color_data[v])  # vertex → color
+
+            loop_colors_per_channel[channel] = flat
                         
-        if scene.flip_face_normals:
-            flip_face_normals_collection(bm)
+        for channel, flat_colors in loop_colors_per_channel.items():
+            color_layer = bm.loops.layers.color.new(f"Col_{channel}")
+
+            i = 0
+            for face in bm.faces:
+                for loop in face.loops:
+                    loop[color_layer] = flat_colors[i]
+                    i += 1
+           
             
-        if scene.flip_uv:
-            flip_uv_collection(bm)
+        if scene.flip_uv_v_avis:
+            flip_uv_v_axis(bm)
             
+        
         bm.to_mesh(mesh)
         bm.free()
         
-        # Normals
-        if Vertex_Buffers[m].Normals:
-            print(f"Normals Length: {len(Vertex_Buffers[m].Normals)}")
-            
-            Normals = []
-            
-            if scene.flip_vertex_normals:
-                for Normal in Vertex_Buffers[m].Normals:
-                    Normals.append((-Normal[0], -Normal[1], -Normal[2]))
-                    
-            else:
-                Normals = Vertex_Buffers[m].Normals
                 
                     
-            
-            mesh.normals_split_custom_set_from_vertices(Normals)
-            mesh.update()
+        # Normals
+        if Vertex_Buffers[m].Normals:          
+            Normals = Vertex_Buffers[m].Normals
+                
+            attr = mesh.attributes.get("custom_normal")
+            if attr is None:
+                    attr = mesh.attributes.new("custom_normal", 'FLOAT_VECTOR', 'POINT')
+                
+            for i, normal in enumerate(Normals):
+                attr.data[i].vector = normal
+        
            
         # Create all vertex groups
         for i in Mesh[2]:
@@ -119,17 +133,19 @@ def ImportModel(filepath):
         
         
         
+        
+        
         mat_name = "0x" + wrap_external.ExternalFilenameHashList[m][::-1].hex().upper()
         mat = bpy.data.materials.new(name=mat_name)
         obj.data.materials.append(mat)
         
+        mesh.update()
         
         new_collection.objects.link(obj)
-        
         bpy.context.view_layer.objects.active = obj
         obj.select_set(True)
                 
-        #bpy.ops.object.shade_auto_smooth(use_auto_smooth=True, angle=math.radians(180))
+        
         
 
         

@@ -1,7 +1,8 @@
 import bpy
+import bpy.utils.previews as previews
 from bpy.types import Operator, FileHandler, PropertyGroup, Menu, Panel
 from bpy.props import StringProperty, BoolProperty, CollectionProperty, IntProperty
-from bpy_extras.io_utils import ExportHelper
+from bpy_extras.io_utils import ImportHelper, ExportHelper, orientation_helper, axis_conversion
 import os
 
 from .BlenderImport import *
@@ -15,7 +16,7 @@ import bmesh
 bl_info = {
     "name": "WoS BlenderToolkit",
     "author": "haru233",
-    "version": (1, 0, 0),
+    "version": (1, 0, 2),
     "blender": (4, 5, 0),
     "location": "File --> Import, File --> Export, Drag-and-Drop (Import/Convert)",
     "description": "Blender addon/plugin for the video game Spider-Man: Web of Shadows"
@@ -42,10 +43,9 @@ def populate_collections():
 
 # Model
 # ------------------------------
-    
 class IMPORT_OT_Mesh_File_View(Operator):
     bl_idname = "import_scene.smwos_mesh_importer_file_view"
-    bl_label = "Model Importer (WOS)"
+    bl_label = "Import Wrap Mesh File (WOS)"
     bl_options = {'REGISTER', 'UNDO'}
     
     filename_ext = ".mesh"
@@ -61,12 +61,10 @@ class IMPORT_OT_Mesh_File_View(Operator):
         scene = context.scene
         
         layout.label(text="Import Options")
-        layout.prop(scene, "flip_uv")
-        layout.prop(scene, "flip_face_normals")
-        layout.prop(scene, "flip_vertex_normals")
-        layout.prop(scene, "convert_triangle_strips")
-        
-        
+        layout.prop(scene, "flip_uv_v_avis")
+        layout.prop(scene, "reverse_winding_order")
+        layout.prop(scene, "convert_to_triangle_list")
+             
     def execute(self, context):
         if not self.files:
             self.report({'WARNING'}, "No files received")
@@ -76,10 +74,11 @@ class IMPORT_OT_Mesh_File_View(Operator):
             filepath = os.path.join(self.directory, file.name)
 
             try:
+                
                 ImportModel(filepath)
             except Exception as e:
                 self.report({'ERROR'}, f"{file.name}: {e}")
-
+            
         self.report({'INFO'}, f"Imported {len(self.files)} file(s)")
         return {'FINISHED'}
         
@@ -87,10 +86,11 @@ class IMPORT_OT_Mesh_File_View(Operator):
         context.window_manager.fileselect_add(self)
         
         return {'RUNNING_MODAL'}
-        
+
+
 class IMPORT_OT_Mesh_Drag_and_Drop(Operator):
     bl_idname = "import_scene.smwos_mesh_importer_drag_and_drop"
-    bl_label = "Model Importer (WOS)"
+    bl_label = "Import Wrap Mesh File (WOS)"
     bl_options = {'REGISTER', 'UNDO'}
 
     # Filepath property
@@ -106,6 +106,7 @@ class IMPORT_OT_Mesh_Drag_and_Drop(Operator):
             filepath = os.path.join(self.directory, file.name)
 
             try:
+                
                 ImportModel(filepath)
             except Exception as e:
                 self.report({'ERROR'}, f"{file.name}: {e}")
@@ -150,9 +151,8 @@ class EXPORT_OT_Mesh(Operator, ExportHelper):
             
         layout.separator()
         layout.label(text="Export Options")
-        layout.prop(scene, "flip_uv")
-        layout.prop(scene, "flip_face_normals")
-        layout.prop(scene, "flip_vertex_normals")
+        layout.prop(scene, "flip_uv_v_avis")
+        layout.prop(scene, "reverse_winding_order")
 
     def execute(self, context):
         scene = context.scene
@@ -185,7 +185,7 @@ class EXPORT_OT_Mesh(Operator, ExportHelper):
 # -------------------------------
 class IMPORT_OT_Skeleton_File_View(Operator):
     bl_idname = "import_scene.smwos_skeleton_importer_file_view"
-    bl_label = "Skeleton Importer (WOS)"
+    bl_label = "Import Wrap Skeleton File (WOS)"
     bl_options = {'REGISTER', 'UNDO'}
     
     filename_ext = ".skel"
@@ -219,7 +219,7 @@ class IMPORT_OT_Skeleton_File_View(Operator):
         
 class IMPORT_OT_Skeleton_Drag_and_Drop(Operator):
     bl_idname = "import_scene.smwos_skeleton_importer_drag_and_drop"
-    bl_label = "Skeleton Importer (WOS)"
+    bl_label = "Import Wrap Skeleton File (WOS)"
     bl_options = {'REGISTER', 'UNDO'}
 
     # Filepath property
@@ -350,8 +350,8 @@ class IMPORT_MT_WoS(Menu):
     bl_idname = "IMPORT_MT_wos_blender_addon"
     
     def draw(self, context):
-        self.layout.operator(IMPORT_OT_Mesh_File_View.bl_idname, text="Wrapped Model (WOS)")
-        self.layout.operator(IMPORT_OT_Skeleton_File_View.bl_idname, text="Wrapped Skeleton (WOS)")
+        self.layout.operator(IMPORT_OT_Mesh_File_View.bl_idname, text="Wrapped Model (WOS)", icon="MESH_DATA")
+        self.layout.operator(IMPORT_OT_Skeleton_File_View.bl_idname, text="Wrapped Skeleton (WOS)", icon="ARMATURE_DATA")
         
 
 class EXPORT_MT_WoS(Menu):
@@ -359,8 +359,8 @@ class EXPORT_MT_WoS(Menu):
     bl_idname = "EXPORT_MT_wos_blender_addon"
     
     def draw(self, context):
-        self.layout.operator(EXPORT_OT_Mesh.bl_idname, text="Wrapped Model (WOS)")
-        self.layout.operator(EXPORT_OT_Skeleton.bl_idname, text="Wrapped Skeleton (WOS)")
+        self.layout.operator(EXPORT_OT_Mesh.bl_idname, text="Wrapped Model (WOS)", icon="MESH_DATA")
+        self.layout.operator(EXPORT_OT_Skeleton.bl_idname, text="Wrapped Skeleton (WOS)", icon="ARMATURE_DATA")
 
 
 # Textures
@@ -408,14 +408,31 @@ class DDS_TEX_FileHandler(FileHandler):
         return filepath.lower().endswith((".dds", ".tex"))
         
         
-        
+# Custom Icons
+custom_icons = {}
+
+def RegisterCustomIcon():
+    pcoll = previews.new()
+    script_path = os.path.dirname(__file__)
+    icons_dir = os.path.join(script_path, "Icons")
+    pcoll.load("wos_blendertoolkit_icon", os.path.join(icons_dir, "Icon.png"), 'IMAGE')
+    custom_icons["main"] = pcoll
+
+
+def UnregisterCustomIcon():
+    for pcoll in custom_icons.values():
+        previews.remove(pcoll)
+    custom_icons.clear()
+    
 # Register the operator
 def menu_func_import(self, context):
-    self.layout.menu(IMPORT_MT_WoS.bl_idname)
+    my_icon = custom_icons["main"]["wos_blendertoolkit_icon"]
+    self.layout.menu(IMPORT_MT_WoS.bl_idname, icon_value=my_icon.icon_id)
     
 # Register the operator
 def menu_func_export(self, context):
-    self.layout.menu(EXPORT_MT_WoS.bl_idname)
+    my_icon = custom_icons["main"]["wos_blendertoolkit_icon"]
+    self.layout.menu(EXPORT_MT_WoS.bl_idname, icon_value=my_icon.icon_id)
     
 
 
@@ -457,25 +474,22 @@ def register():
         name="Collections"
     )
     
-    bpy.types.Scene.flip_face_normals = bpy.props.BoolProperty(
-        name="Flip Face Normals",
-        default=True
-    )
-    
-    bpy.types.Scene.flip_vertex_normals = bpy.props.BoolProperty(
-        name="Flip Vertex Normals",
+    bpy.types.Scene.flip_uv_v_avis = bpy.props.BoolProperty(
+        name="Flip UV V-Axis",
         default=False
     )
     
-    bpy.types.Scene.flip_uv = bpy.props.BoolProperty(
-        name="Flip UV V-Axis",
-        default=True
+    bpy.types.Scene.reverse_winding_order = bpy.props.BoolProperty(
+        name="Reverse Triangle Winding Order",
+        default=False
     )
     
-    bpy.types.Scene.convert_triangle_strips = bpy.props.BoolProperty(
-        name="Convert Triangle Strips",
-        default=True
+    bpy.types.Scene.convert_to_triangle_list = bpy.props.BoolProperty(
+        name="Convert to Triangle List",
+        default=False
     )
+    
+    RegisterCustomIcon()
     
    
 
@@ -493,24 +507,22 @@ def unregister():
     if hasattr(bpy.types.Scene, "collection_search_dropdown"):
         del bpy.types.Scene.collection_search_dropdown
         
-    if hasattr(bpy.types.Scene, "flip_face_normals"):
-        del bpy.types.Scene.flip_face_normals
+    if hasattr(bpy.types.Scene, "flip_uv_v_avis"):
+        del bpy.types.Scene.flip_uv_v_avis
+        
+    if hasattr(bpy.types.Scene, "reverse_winding_order"):
+        del bpy.types.Scene.reverse_winding_order
     
-    if hasattr(bpy.types.Scene, "flip_vertex_normals"):
-        del bpy.types.Scene.flip_vertex_normals
-        
-    if hasattr(bpy.types.Scene, "flip_uv"):
-        del bpy.types.Scene.flip_uvs
-        
-    if hasattr(bpy.types.Scene, "Convert Triangle Strips"):
-        del bpy.types.Scene.convert_triangle_strips
+    if hasattr(bpy.types.Scene, "convert_to_triangle_list"):
+        del bpy.types.Scene.convert_to_triangle_list
 
     for cls in reversed(classes):
         try:
             bpy.utils.unregister_class(cls)
         except RuntimeError:
             pass
-
+    
+    UnregisterCustomIcon()
 
 if __name__ == "__main__":
     register()
