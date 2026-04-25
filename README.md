@@ -27,7 +27,7 @@ Use latest version of kirbystealer's [WebOfShadowsTools](https://github.com/kirb
 - Supported pixel formats: DXT1, DXT3, DXT5, D3DFMT_A8R8G8B8, D3DFMT_X8R8G8B8, D3DFMT_L8
 
 # Notes:
-- Safe max vertex groups count for each submesh is 48, otherwise the mesh deformation will look off
+- Safe max vertex groups count for each submesh is 48, otherwise the mesh deformation might look off
 
 - For custom model ports, rename your materials to the name of any material file the original model uses, full name could work but preferred to only take the hash part, like: `0x9E8F3E7F`
 
