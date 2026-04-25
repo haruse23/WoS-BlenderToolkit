@@ -26,6 +26,21 @@ Use latest version of kirbystealer's [WebOfShadowsTools](https://github.com/kirb
 
 - Supported pixel formats: DXT1, DXT3, DXT5, D3DFMT_A8R8G8B8, D3DFMT_X8R8G8B8, D3DFMT_L8
 
+# Tutorials:
+<details>
+<summary>Porting Batman to Web of Shadows Part I</summary>
+  
+https://youtu.be/P3-AcD7pwpQ?si=igozY6xRtYtuqvfQ
+   
+</details>
+
+<details>
+<summary>Porting Batman to Web of Shadows Part I</summary>
+
+https://youtu.be/4fldUmAR0pw?si=WAuIYQT_cietPRa5
+	
+</details>
+
 # Notes:
 - Safe max vertex groups count for each submesh is 48, otherwise the mesh deformation might look off
 
