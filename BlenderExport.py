@@ -390,52 +390,52 @@ def ExportModel(collection, filepath, mesh_objects):
         wrap_internal.WriteWRAPSectionInternalPatch(out)
         
         m = 0
-        i = 0
+        i = 1
         for base in range(mesh_count):
             mesh_data = meshes_data[base]
             
             bone_data = mesh_data["bone_data"]
                     
-            wrap_internal.dwPointerTargetInternal = mesh_table.MeshInfoPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+1] # Second Internal Pointer, MeshInfoPointer
+            wrap_internal.dwPointerTargetInternal = mesh_table.MeshInfoPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i] # Second Internal Pointer, MeshInfoPointer
         
             wrap_internal.WriteWRAPSectionInternalPatch(out)
+            
+            i+=1
             
             BonePaletteCount = len(bone_data["bone_palette"])
-            
-            offset = 0
             if BonePaletteCount:
-                wrap_internal.dwPointerTargetInternal = mesh_info.BonePalettePointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+2] # Third Internal Pointer, BonePalettePointer
+                wrap_internal.dwPointerTargetInternal = mesh_info.BonePalettePointerStart[m] - wrap_internal.PointerTargetInternalStartList[i] # Third Internal Pointer, BonePalettePointer
             
                 wrap_internal.WriteWRAPSectionInternalPatch(out)
+                
+                i+=1
             
+            wrap_internal.dwPointerTargetInternal = mesh_info.VertexBufferPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i] # Fourth Internal Pointer, VertexBufferPointer
+        
+            wrap_internal.WriteWRAPSectionInternalPatch(out)
             
-            else:
-                offset = -1  # Decrease all subsequent indices by 1
+            i+=1
+        
+            wrap_internal.dwPointerTargetInternal = mesh_info.IndexBufferPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i] # Fifth Internal Pointer, IndexBufferPointer
+        
+            wrap_internal.WriteWRAPSectionInternalPatch(out)
             
-            wrap_internal.dwPointerTargetInternal = mesh_info.VertexBufferPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+3+offset] # Fourth Internal Pointer, VertexBufferPointer
+            i+=1
+        
+            wrap_internal.dwPointerTargetInternal = mesh_info.SchemaTablePointerStart[m] - wrap_internal.PointerTargetInternalStartList[i] # Sixth Internal Pointer, SchemaTablePointer
         
             wrap_internal.WriteWRAPSectionInternalPatch(out)
+            
+            i+=1
         
-            wrap_internal.dwPointerTargetInternal = mesh_info.IndexBufferPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+4+offset] # Fifth Internal Pointer, IndexBufferPointer
-        
-            wrap_internal.WriteWRAPSectionInternalPatch(out)
-        
-            wrap_internal.dwPointerTargetInternal = mesh_info.SchemaTablePointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+5+offset] # Sixth Internal Pointer, SchemaTablePointer
+            wrap_internal.dwPointerTargetInternal = schema_table.VertexSchemaPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i] # Seventh Internal Pointer, VertexSchemaPointer
         
             wrap_internal.WriteWRAPSectionInternalPatch(out)
-        
-            wrap_internal.dwPointerTargetInternal = schema_table.VertexSchemaPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+6+offset] # Seventh Internal Pointer, VertexSchemaPointer
-        
-            wrap_internal.WriteWRAPSectionInternalPatch(out)
+            
+            i+=1
             
             m += 1
-            
-            if BonePaletteCount:
-                i += 6
-                
-            else:
-                i += 5
-                
+          
             
             
             
