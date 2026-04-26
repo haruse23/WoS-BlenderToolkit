@@ -80,6 +80,10 @@ Join the [Web of Shadows](https://discord.gg/NftyUNJw) discord server for any qu
 - Fixed issues with axis orientation and handedness
 - Fixed issues with UVs after export from Blender
 - Better model import speed
+- Fixed issues with static model export related to the WRAPSectionPatchTable, that caused problems with static model mods
+- Fixed issues with formatting hex numbers (pcapkFilenameHash) into strings, that caused key errors when fetching bone names from some skeletons.
+	- Now should be correctly something like: "0x05102987" instead of "0x5102987"
+- Rewrote some parts of the code cleanlier, and now supposedly all game meshes should be supported for import into Blender
 
 ### 1.0.1
 - Minor changes and fixes
