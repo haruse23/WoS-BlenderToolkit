@@ -56,21 +56,31 @@ def ExportModel(collection, filepath, mesh_objects):
         wrap_patchtable = WRAPSectionPatchTable()
         
 
-        wrap_patchtable.dwExternalPatchCount = 1 + mesh_count
+        wrap_patchtable.dwExternalPatchCount = 1
         wrap_patchtable.dwExternalPatchPointer = 0x1C
         
-        wrap_patchtable.dwInternalPatchCount = mesh_count * 6
+        wrap_patchtable.dwInternalPatchCount = 1 + mesh_count * 5
         wrap_patchtable.dwGlobalPatchCount = 0
-
-        mesh_dict = data["meshes"][0]["data"] # Just take only first mesh data from mesh_data_list and access the mesh dictionary, to test
-            
-        blend_indices = mesh_dict["blend_indices"]
-        blend_weights = mesh_dict["blend_weights"]
-            
-        if has_skinning(blend_indices, blend_weights):
-            wrap_patchtable.dwExternalPatchCount += 1
-            wrap_patchtable.dwInternalPatchCount += 1
-            
+        
+        has_materials = []
+        for mesh_obj in mesh_objects:
+            if any(slot.material for slot in mesh_obj.material_slots):
+                wrap_patchtable.dwExternalPatchCount += 1
+                has_materials.append(True)
+            else:
+                has_materials.append(False)
+                
+        
+        has_armature = [False, -1]
+        for m, mesh_obj in enumerate(mesh_objects):
+            if not has_armature[0] and mesh_obj.parent and mesh_obj.parent.type == 'ARMATURE':
+                wrap_patchtable.dwExternalPatchCount += 1 # Add Skel External Patch Pointer if at least one mesh has a parent armature, then stop for this one
+                has_armature[0] = True
+                has_armature[1] = m
+                
+            if mesh_obj.parent and mesh_obj.parent.type == 'ARMATURE':
+                wrap_patchtable.dwInternalPatchCount += 1 # Add BonePalettePointer Internal Patch Pointer as many times as mesh count, regardles
+                
         ExternalPatchPointerStart, InternalPatchPointerStart, GlobalPatchPointerStart = wrap_patchtable.WriteWRAPSectionPatchTable(out)
         
         # Writing WRAP Section (ExternalPatch)
@@ -330,6 +340,7 @@ def ExportModel(collection, filepath, mesh_objects):
         
         # Updating & Rewriting WRAP Section (ExternalPatch)
         out.seek(wrap_external_start)
+        
         # NAME
         wrap_external.dwPatchToTypeExternal = 1162690894 # NAME bytes in decimal, interpreted as 4-byte unsigned int
         wrap_external.dwExternalFilenameHash = b"\x00\x00\x00\x00"
@@ -339,46 +350,36 @@ def ExportModel(collection, filepath, mesh_objects):
         wrap_external.WriteWRAPSectionExternalPatch(out)
         
         # SKEL
-        mesh_dict = data["meshes"][0]["data"] # Just take only first mesh data from mesh_data_list and access the mesh dictionary, to test
-            
-        blend_indices = mesh_dict["blend_indices"]
-        blend_weights = mesh_dict["blend_weights"]
-        
-        mesh_data = meshes_data[0]
-        
-        if mesh_data["skeleton_name"]:
+        if has_armature[0]: # if True
+            index = has_armature[1]
+            mesh_data = meshes_data[index]
             skeleton_name = Hash(mesh_data["skeleton_name"]).to_bytes(4, byteorder="little")
-        else:
-            skeleton_name = b"\x00\x00\x00\x00"
-        
-        if has_skinning(blend_indices, blend_weights):
+
             wrap_external.dwPatchToTypeExternal = 1279609683 # SKEL bytes in decimal, interpreted as 4-byte unsigned int
             wrap_external.dwExternalFilenameHash = skeleton_name
             wrap_external.dwExpectedIndexExternal = 4294967295 # FF FF FF FF bytes in decimal, interpreted as 4-byte unsigned int
             wrap_external.dwPointerTargetExternal = (model_header_start + 20) - wrap_external.PointerTargetExternalStartList[1]
-        
+
             wrap_external.WriteWRAPSectionExternalPatch(out)
             
         # MAT
-        for m in range(mesh_count):
-            mesh_data = meshes_data[m]
+        for t, hm in enumerate(has_materials):
+            mesh_data = meshes_data[t]
             
-            if mesh_data["material_name"]:
+            if hm: # if True
                 material_name = bytes.fromhex(mesh_data["material_name"].replace("0x", ""))[::-1]
-            else:
-                material_name = b"\x00\x00\x00\x00"
+
+                wrap_external.dwPatchToTypeExternal = 5521741 # MAT bytes in decimal, interpreted as 4-byte unsigned int
+                wrap_external.dwExternalFilenameHash = material_name
+                wrap_external.dwExpectedIndexExternal = 4294967295 # FF FF FF FF bytes in decimal, interpreted as 4-byte unsigned int
             
-            wrap_external.dwPatchToTypeExternal = 5521741 # MAT bytes in decimal, interpreted as 4-byte unsigned int
-            wrap_external.dwExternalFilenameHash = material_name
-            wrap_external.dwExpectedIndexExternal = 4294967295 # FF FF FF FF bytes in decimal, interpreted as 4-byte unsigned int
-            
-            if has_skinning(blend_indices, blend_weights):
-                wrap_external.dwPointerTargetExternal = mesh_info.MaterialDataPointerStart[m] - wrap_external.PointerTargetExternalStartList[m+2]
+                if has_armature[0]: # if True
+                    wrap_external.dwPointerTargetExternal = mesh_info.MaterialDataPointerStart[t] - wrap_external.PointerTargetExternalStartList[t+2]
+                    
+                else:
+                    wrap_external.dwPointerTargetExternal = mesh_info.MaterialDataPointerStart[t] - wrap_external.PointerTargetExternalStartList[t+1]
                 
-            else:
-                wrap_external.dwPointerTargetExternal = mesh_info.MaterialDataPointerStart[m] - wrap_external.PointerTargetExternalStartList[m+1]
-            
-            wrap_external.WriteWRAPSectionExternalPatch(out)
+                wrap_external.WriteWRAPSectionExternalPatch(out)
             
             
         
@@ -401,28 +402,31 @@ def ExportModel(collection, filepath, mesh_objects):
             
             BonePaletteCount = len(bone_data["bone_palette"])
             
+            offset = 0
             if BonePaletteCount:
                 wrap_internal.dwPointerTargetInternal = mesh_info.BonePalettePointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+2] # Third Internal Pointer, BonePalettePointer
             
                 wrap_internal.WriteWRAPSectionInternalPatch(out)
-                
+            
+            
             else:
-                i -= 1
-                wrap_internal.dwPointerTargetInternal = mesh_info.VertexBufferPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+3] # Fourth Internal Pointer, VertexBufferPointer
+                offset = -1  # Decrease all subsequent indices by 1
             
-                wrap_internal.WriteWRAPSectionInternalPatch(out)
-            
-                wrap_internal.dwPointerTargetInternal = mesh_info.IndexBufferPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+4] # Fifth Internal Pointer, IndexBufferPointer
-            
-                wrap_internal.WriteWRAPSectionInternalPatch(out)
-            
-                wrap_internal.dwPointerTargetInternal = mesh_info.SchemaTablePointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+5] # Sixth Internal Pointer, SchemaTablePointer
-            
-                wrap_internal.WriteWRAPSectionInternalPatch(out)
-            
-                wrap_internal.dwPointerTargetInternal = schema_table.VertexSchemaPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+6] # Seventh Internal Pointer, VertexSchemaPointer
-            
-                wrap_internal.WriteWRAPSectionInternalPatch(out)
+            wrap_internal.dwPointerTargetInternal = mesh_info.VertexBufferPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+3+offset] # Fourth Internal Pointer, VertexBufferPointer
+        
+            wrap_internal.WriteWRAPSectionInternalPatch(out)
+        
+            wrap_internal.dwPointerTargetInternal = mesh_info.IndexBufferPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+4+offset] # Fifth Internal Pointer, IndexBufferPointer
+        
+            wrap_internal.WriteWRAPSectionInternalPatch(out)
+        
+            wrap_internal.dwPointerTargetInternal = mesh_info.SchemaTablePointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+5+offset] # Sixth Internal Pointer, SchemaTablePointer
+        
+            wrap_internal.WriteWRAPSectionInternalPatch(out)
+        
+            wrap_internal.dwPointerTargetInternal = schema_table.VertexSchemaPointerStart[m] - wrap_internal.PointerTargetInternalStartList[i+6+offset] # Seventh Internal Pointer, VertexSchemaPointer
+        
+            wrap_internal.WriteWRAPSectionInternalPatch(out)
             
             m += 1
             

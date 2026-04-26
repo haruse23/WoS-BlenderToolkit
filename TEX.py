@@ -24,7 +24,7 @@ class TEX:
         self.dwFilenameHash = read_uint(f)
         self.dwUnused2 = f.read(2 * 4)
         self.dwWidth = read_uint(f)
-        self.dwHeight = read_uint(f)
+        self.dwWidth = read_uint(f)
         self.dwDepth = read_uint(f)
         self.dwMipMapCount = read_uint(f)
         self.dwFourCC = f.read(4)

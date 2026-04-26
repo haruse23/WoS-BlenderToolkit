@@ -217,7 +217,7 @@ def ImportSkeleton(filepath):
         parent_indices.append(parent_index)
         
         if pcapkFilenameHash and bone.BonenamePointer:
-            pcapk_hash = f"0x{pcapkFilenameHash:X}"
+            pcapk_hash = f"0x{pcapkFilenameHash:08X}"
             bone_name = lookup_pcapk_string_table(pcapk_hash, bone.BonenamePointer)
         else:
             bone_name = f"bone_{i}"

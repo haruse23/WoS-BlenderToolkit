@@ -432,70 +432,69 @@ class VertexAttribute:
             
             position_data = FetchAndReadDataType(f, self.Type)
             
-            px = position_data[0] / 32767 * ModelBBoxX + ModelOffsetX
-            py = position_data[1] / 32767 * ModelBBoxY + ModelOffsetY
-            pz = position_data[2] / 32767 * ModelBBoxZ + ModelOffsetZ
+            px = position_data[0] * ModelBBoxX + ModelOffsetX
+            py = position_data[1] * ModelBBoxY + ModelOffsetY
+            pz = position_data[2] * ModelBBoxZ + ModelOffsetZ
             pw = 0
             
-            self.Buffer.Positions.append((px, py, pz))
+            position_tuple = (px, py, pz)
+            
+            self.Buffer.Positions.append(position_tuple)
             
         if self.Usage == "BLENDWEIGHT":
-            bw1, bw2, bw3, bw4 = FetchAndReadDataType(f, self.Type)
+            blendweight_data = FetchAndReadDataType(f, self.Type)
             
-            self.Buffer.BlendWeights.append((bw1, bw2, bw3, bw4))
+            blendweight_tuple = blendweight_data[:4]
+            
+            self.Buffer.BlendWeights.append(blendweight_tuple)
             
         if self.Usage == "BLENDINDICES":
-            bi1, bi2, bi3, bi4 = FetchAndReadDataType(f, self.Type)
+            blendindices_data = FetchAndReadDataType(f, self.Type)
             
-            self.Buffer.BlendIndices.append((bi1, bi2, bi3, bi4))
+            blendindices_tuple = blendindices_data[:4]
+            
+            self.Buffer.BlendIndices.append(blendindices_tuple)
             
         if self.Usage == "NORMAL":
             normal_data = FetchAndReadDataType(f, self.Type)
             
-            nx = normal_data[0]
-            ny = normal_data[1]
-            nz = normal_data[2]
+            normal_tuple = normal_data[:3]
             
-            
-            
-            self.Buffer.Normals.append((nx, ny, nz))
+            self.Buffer.Normals.append(normal_tuple)
             
         if self.Usage == "TEXCOORD":
             texcoord_data = FetchAndReadDataType(f, self.Type)
             
-            tc1 = texcoord_data[0]
-            tc2 = texcoord_data[1]
+            texcoord_tuple = texcoord_data[:2]
             
             if self.UsageIndex not in self.Buffer.TexCoords:
                 self.Buffer.TexCoords[self.UsageIndex] = []
                 
-            self.Buffer.TexCoords[self.UsageIndex].append((tc1, tc2))
+            self.Buffer.TexCoords[self.UsageIndex].append(texcoord_tuple)
             
         if self.Usage == "TANGENT":
             tangent_data = FetchAndReadDataType(f, self.Type)
             
-            tx = tangent_data[0]
-            ty = tangent_data[1]
-            tz = tangent_data[2]
+            tangent_tuple = tangent_data[:3]
             
-            self.Buffer.Tangents.append((tx, ty, tz))
+            self.Buffer.Tangents.append(tangent_tuple)
             
         if self.Usage == "BINORMAL":
             binormal_data = FetchAndReadDataType(f, self.Type)
             
-            bnx = binormal_data[0]
-            bny = binormal_data[1]
-            bnz = binormal_data[2]
+            binormal_tuple = binormal_data[:3]
             
-            self.Buffer.Binormals.append((bnx, bny, bnz))
+            self.Buffer.Binormals.append(binormal_tuple)
             
         if self.Usage == "COLOR":
-            c1, c2, c3, c4 = FetchAndReadDataType(f, self.Type)
+            color_data = FetchAndReadDataType(f, self.Type)
             
+            color_tuple = color_data[:4]
+
             if self.UsageIndex not in self.Buffer.Colors:
                 self.Buffer.Colors[self.UsageIndex] = []
                 
-            self.Buffer.Colors[self.UsageIndex].append((c1, c2, c3, c4))
+            self.Buffer.Colors[self.UsageIndex].append(color_tuple)
                 
                 
     def WriteVertexAttribute(self, f, vertex_count, positions, normals, tangents, binormals, uvs, colors, blend_indices, blend_weights, ModelBBox, BonePaletteCount):

@@ -204,7 +204,11 @@ def FetchAndReadDataType(f, DataType):
     
     if DataType == 10:
         value1, value2, value3, value4 = struct.unpack("<4h", f.read(8))
-   
+        
+        value1 = value1 / 32767
+        value2 = value2 / 32767
+        value3 = value3 / 32767
+        value4 = value4 / 32767
         
         return (value1, value2, value3, value4)
     
