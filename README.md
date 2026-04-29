@@ -48,7 +48,7 @@ Use latest version of kirbystealer's [WebOfShadowsTools](https://github.com/kirb
 	
 - It is advised to use the default values of the Import Options for original game models and models that have been tweaked to match the game settings when exported
 
-- It is advised to turn off the Convert Triangle Strips option on import for models that have been exported using this toolkit, so as not to double convert an already-ready Triangle List
+- It is advised to turn off the Convert to Triangle List option on import for models that have been exported using this toolkit, so as not to double convert an already-ready Triangle List
 
 Reasoning:
 - Blender doesn't use Triangle Strips, which is the Primitive Type used in almost all the game's original models for face polygons, so they need to be converted to normal Triangle List for Blender to consume.
