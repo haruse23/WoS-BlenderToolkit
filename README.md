@@ -45,8 +45,6 @@ Use latest version of kirbystealer's [WebOfShadowsTools](https://github.com/kirb
 
 - To convert to the game's texture files you need a DDS file to drag and drop into Blender's 3D Viewport
   - If you don't have your image file ready in the DDS format, then you can use this [SimpleTextureConverter](https://www.nexusmods.com/site/mods/1539) tool to convert back-and-forth between a lot of image formats including DDS
-	
-- It is advised to use the default values of the Import Options for original game models and models that have been tweaked to match the game settings when exported
 
 - It is advised to turn off the Convert to Triangle List option on import for models that have been exported using this toolkit, so as not to double convert an already-ready Triangle List
 
