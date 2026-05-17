@@ -70,7 +70,7 @@ Reasoning:
 - kirbystealer for `get_string_lookup.py` and `stringtable_pcapk.zip`
 - All the amazing Blender addons made for video-games, that I learned through reading them a lot, along with everybody who helped in my coding/reverse engineering journey so far, on Discord especially. Special mention: NSACloud's [RE Mesh Editor](https://github.com/NSACloud/RE-Mesh-Editor/)
   
-Join the [Web of Shadows](https://discord.gg/NftyUNJw) discord server for any questions
+Join the [Web of Shadows](https://discord.gg/KWNGgZBS9k) discord server for any questions
 
 # Changelog
 ### 1.0.2
