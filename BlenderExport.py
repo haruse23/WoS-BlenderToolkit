@@ -28,6 +28,8 @@ def ExportModel(collection, filepath, mesh_objects):
         
         data = FetchBlenderData(mesh_objects)
         
+        meshes_data = data["meshes"] # mesh_data_list, List of each mesh data (List of dictionaries for every mesh)
+        
         scene = bpy.context.scene
              
         ############################################################
@@ -108,11 +110,16 @@ def ExportModel(collection, filepath, mesh_objects):
         
         
         # Model Header
-        
+        mesh_data = meshes_data[0] # Just take the first mesh data, since all meshes have same model origin
+
         model_header = ModelHeader()
         
         model_header.dwFilenameHash = Hash(collection.name)
         model_header.dwMeshCount = mesh_count
+        
+        model_header.ModelOriginX = mesh_data["mesh_origin"][0]
+        model_header.ModelOriginY = mesh_data["mesh_origin"][1]
+        model_header.ModelOriginZ = mesh_data["mesh_origin"][2]
         
         model_header.ModelBoundingSphereRadius = model_bounds["model_bsphere_radius"]
         
@@ -155,7 +162,7 @@ def ExportModel(collection, filepath, mesh_objects):
         mesh_info = MeshInfo()
         schema_table = SchemaTable()
         vertex_schema = VertexSchema()
-        meshes_data = data["meshes"] # mesh_data_list, List of each mesh data (List of dictionaries for every mesh)
+
         
         
         mesh_info_start_list = []
@@ -476,6 +483,10 @@ def ExportModel(collection, filepath, mesh_objects):
             mesh_dict = mesh_data["data"]
             
             bone_data = mesh_data["bone_data"]
+            
+            mesh_info.MeshOriginX = mesh_data["mesh_origin"][0]
+            mesh_info.MeshOriginY = mesh_data["mesh_origin"][1]
+            mesh_info.MeshOriginZ = mesh_data["mesh_origin"][2]
             
             mesh_info.MeshBoundingSphereRadius = bounds["mesh_bsphere_radius"]
             

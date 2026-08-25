@@ -118,14 +118,14 @@ def ImportModel(filepath):
         
            
         # Create all vertex groups
-        for i in Mesh[2]:
+        for i in Mesh[3]:
             obj.vertex_groups.new(name=f"bone_{i}")
 
         
         
         for v_idx, (indices, weights) in enumerate(zip(Vertex_Buffers[m].BlendIndices, Vertex_Buffers[m].BlendWeights)):
             for palette_index, w in zip(indices, weights):
-                    bone_idx = Mesh[2][palette_index] # Bone index from the palette
+                    bone_idx = Mesh[3][palette_index] # Bone index from the palette
                     
                     if w != 0:
                         obj.vertex_groups[f"bone_{bone_idx}"].add([v_idx], w, 'REPLACE')
@@ -140,6 +140,9 @@ def ImportModel(filepath):
         obj.data.materials.append(mat)
         
         mesh.update()
+        
+        obj.location = Vector((Mesh[0].ModelOriginX, Mesh[0].ModelOriginY, Mesh[0].ModelOriginZ)) # Mesh[0] is model_header
+        # Setting the Mesh Origin for each Mesh Object, instead of adding and baking it into the vertex positions
         
         new_collection.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
@@ -240,6 +243,8 @@ def ImportSkeleton(filepath):
             edit_bone.parent = bones[parent_index]
         
         edit_bone.head = Vector((0.0, 0.0, 0.0))
+        
+        #bone_y_direction = matrices[i].col[1].to_3d().normalized()
         edit_bone.tail = Vector((0.0, 0.1, 0.0))
         
         edit_bone.matrix = matrices[i]

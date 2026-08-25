@@ -98,7 +98,7 @@ def ReadModel(filepath):
             
             print(f.tell())
             
-            Model.append((mesh_table, mesh_info, bone_palette_indices, schema_table, vertex_declaration))
+            Model.append((model_header, mesh_table, mesh_info, bone_palette_indices, schema_table, vertex_declaration))
             
 
         
@@ -107,12 +107,15 @@ def ReadModel(filepath):
         Vertex_Buffers = []
         Index_Buffers = []
         print(f.tell())
-        f.seek(Model[0][1].VertexBufferPointerPOS + Model[0][1].dwVertexBufferPointer, 0)
+        f.seek(Model[0][2].VertexBufferPointerPOS + Model[0][2].dwVertexBufferPointer, 0) # Model[0] is first mesh
+        # Model[0][2] is first mesh's mesh info
+        # Seek to first mesh vertex buffer (start of PHYS data block)
+        
         for Mesh in Model:
             vertex_buffer = VertexBuffer()
-            for v in range(Mesh[1].dwVertexCount):
-                #print(Mesh[1].dwVertexCount)
-                for vertex_schema in Mesh[4]: # vertex_declaration
+            for v in range(Mesh[2].dwVertexCount):
+                #print(Mesh[2].dwVertexCount)
+                for vertex_schema in Mesh[5]: # vertex_declaration
                     vertex_attribute = VertexAttribute()
                     
                     vertex_attribute.Buffer = vertex_buffer
@@ -124,10 +127,10 @@ def ReadModel(filepath):
             align_to_4(f, f.tell())
             print(f.tell())
             index_buffer = IndexBuffer()
-            for id in range(Mesh[1].dwIndexCount):
+            for __ in range(Mesh[2].dwIndexCount): # Mesh[2] is every mesh's mesh info
 
                 
-                index_buffer.ReadIndex(f, Mesh[1].dwVertexCount)
+                index_buffer.ReadIndex(f, Mesh[2].dwVertexCount) # Mesh[2] is every mesh's mesh info
                 
             Index_Buffers.append(index_buffer)
             print(f.tell())

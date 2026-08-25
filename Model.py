@@ -63,9 +63,9 @@ class ModelHeader():
         self.ExternalMeshTablePointerPOS = 0 # For Reading Model
         self.ExternalMeshTablePointer = 0
         
-        self.ModelOffsetX = 0 # Add to position X
-        self.ModelOffsetY = 0 # Add to position Y
-        self.ModelOffsetZ = 0 # Add to position Z
+        self.ModelOriginX = 0 # Add to position X
+        self.ModelOriginY = 0 # Add to position Y
+        self.ModelOriginZ = 0 # Add to position Z
         self.ModelBoundingSphereRadius= 0
         
         self.fpModelBBoxX = 0
@@ -90,9 +90,9 @@ class ModelHeader():
         self.ExternalMeshTablePointerPOS = f.tell()
         self.ExternalMeshTablePointer = read_uint(f)
         
-        self.ModelOffsetX = read_float(f)
-        self.ModelOffsetY = read_float(f)
-        self.ModelOffsetZ = read_float(f)
+        self.ModelOriginX = read_float(f)
+        self.ModelOriginY = read_float(f)
+        self.ModelOriginZ = read_float(f)
         self.ModelBoundingSphereRadius = read_float(f)
         
         self.fpModelBBoxX = read_float(f)
@@ -113,9 +113,9 @@ class ModelHeader():
         write_uint(f, self.ExternalMeshCount) # Unknown1
         write_uint(f, self.ExternalMeshTablePointer) # Unknown2
         
-        write_float(f, self.ModelOffsetX)
-        write_float(f, self.ModelOffsetY)
-        write_float(f, self.ModelOffsetZ)
+        write_float(f, self.ModelOriginX)
+        write_float(f, self.ModelOriginY)
+        write_float(f, self.ModelOriginZ)
         write_float(f, self.ModelBoundingSphereRadius)
         
         write_float(f, self.fpModelBBoxX)
@@ -170,9 +170,9 @@ class MeshTable():
         
 class MeshInfo():
     def __init__(self):
-        self.MeshOffsetX = 0
-        self.MeshOffsetY = 0
-        self.MeshOffsetZ = 0
+        self.MeshOriginX = 0
+        self.MeshOriginY = 0
+        self.MeshOriginZ = 0
         self.MeshBoundingSphereRadius = 0
         
         self.fpMeshBBoxX = 0
@@ -215,9 +215,9 @@ class MeshInfo():
         
         
     def ReadMeshInfo(self, f):
-        self.MeshOffsetX = read_float(f)
-        self.MeshOffsetY = read_float(f)
-        self.MeshOffsetZ = read_float(f)
+        self.MeshOriginX = read_float(f)
+        self.MeshOriginY = read_float(f)
+        self.MeshOriginZ = read_float(f)
         self.MeshBoundingSphereRadius = read_float(f)
         
         self.fpMeshBBoxX = read_float(f)
@@ -252,9 +252,9 @@ class MeshInfo():
         
         
     def WriteMeshInfo(self, f):
-        write_float(f, self.MeshOffsetX)
-        write_float(f, self.MeshOffsetY)
-        write_float(f, self.MeshOffsetZ)
+        write_float(f, self.MeshOriginX)
+        write_float(f, self.MeshOriginY)
+        write_float(f, self.MeshOriginZ)
         write_float(f, self.MeshBoundingSphereRadius)
         
         write_float(f, self.fpMeshBBoxX)
@@ -426,15 +426,15 @@ class VertexAttribute:
             ModelBBoxZ = model_header.fpModelBBoxZ
             ModelBBoxW = model_header.fpModelBBoxW
             
-            ModelOffsetX = model_header.ModelOffsetX
-            ModelOffsetY = model_header.ModelOffsetY
-            ModelOffsetZ = model_header.ModelOffsetZ
+            ModelOriginX = model_header.ModelOriginX
+            ModelOriginY = model_header.ModelOriginY
+            ModelOriginZ = model_header.ModelOriginZ
             
             position_data = FetchAndReadDataType(f, self.Type)
             
-            px = position_data[0] * ModelBBoxX + ModelOffsetX
-            py = position_data[1] * ModelBBoxY + ModelOffsetY
-            pz = position_data[2] * ModelBBoxZ + ModelOffsetZ
+            px = position_data[0] * ModelBBoxX
+            py = position_data[1] * ModelBBoxY
+            pz = position_data[2] * ModelBBoxZ
             pw = 0
             
             position_tuple = (px, py, pz)
@@ -445,6 +445,9 @@ class VertexAttribute:
             blendweight_data = FetchAndReadDataType(f, self.Type)
             
             blendweight_tuple = blendweight_data[:4]
+            
+            with open("blendweight_log.txt", "a") as test:
+                test.write(str(sum(blendweight_tuple)) + "\n")
             
             self.Buffer.BlendWeights.append(blendweight_tuple)
             
@@ -546,7 +549,7 @@ class VertexAttribute:
                   pz = pz / ModelBBoxZ
                   pw = 0
                   
-                  px = px * 32767
+                  """px = px * 32767
                   py = py * 32767
                   pz = pz * 32767
                   pw = 0
@@ -554,9 +557,9 @@ class VertexAttribute:
                   px = int(round(px))
                   py = int(round(py))
                   pz = int(round(pz))
-                  pw = int(round(pw))
+                  pw = int(round(pw))"""
                   
-                  f.write(struct.pack("<4h", px, py, pz, pw))
+                  f.write(struct.pack("<4f", px, py, pz, pw))
               
             if attribute_exists(normals):
                   N = normals[i]
@@ -630,6 +633,8 @@ class VertexAttribute:
                         int(round(b * 255)) for b in BW
                     ])"""
                                   
+                  
+
                   f.write(struct.pack("<4B", bw1, bw2, bw3, bw4))
                   
                   # Blend Indices

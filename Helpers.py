@@ -18,7 +18,9 @@ def read_vertex_position_short(f):
 def read_uint(f):
     return struct.unpack("<I", f.read(4))[0]
 
-
+def read_int(f):
+    return struct.unpack("<i", f.read(4))[0]
+    
 def read_float(f):
     return struct.unpack("<f", f.read(4))[0]
 
@@ -106,6 +108,9 @@ def write_ubyte(f, data):
     
 def write_uint(f, data):
     f.write(struct.pack("<I", data))
+    
+def write_int(f, data):
+    f.write(struct.pack("<i", data))
     
 def write_ushort(f, data):
     f.write(struct.pack("<H", data))
@@ -377,7 +382,7 @@ def FetchBlenderData(mesh_objects):
             add(16, 6, 0, 8)
 
         if attribute_exists(mesh_dict["positions"]):
-            add(10, 0, 0, 8)
+            add(3, 0, 0, 16)
 
         if attribute_exists(mesh_dict["normals"]):
             add(16, 3, 0, 8)
@@ -496,8 +501,11 @@ def FetchBlenderData(mesh_objects):
         skeleton_name = armature_obj.name if armature_obj else None
         material_name = get_material_name(obj)
         
+        mesh_origin = obj.location
+        
         mesh_data = {
             "obj": obj,
+            "mesh_origin": mesh_origin,
             "mesh": blender_mesh,
             "data": mesh_dict,
             "bounds": compute_bounds(positions),

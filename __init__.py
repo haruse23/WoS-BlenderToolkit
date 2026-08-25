@@ -1,7 +1,7 @@
 import bpy
 import bpy.utils.previews as previews
 from bpy.types import Operator, FileHandler, PropertyGroup, Menu, Panel
-from bpy.props import StringProperty, BoolProperty, CollectionProperty, IntProperty
+from bpy.props import StringProperty, BoolProperty, CollectionProperty, IntProperty, EnumProperty
 from bpy_extras.io_utils import ImportHelper, ExportHelper, orientation_helper, axis_conversion
 import os
 
@@ -167,7 +167,7 @@ class EXPORT_OT_Mesh(Operator, ExportHelper):
                 
                 # Hash prepended filename
                 hash_int = Hash(collection.name)
-                hash_str = f"{hash_int & 0xFFFFFFFF:X}"
+                hash_str = f"{hash_int & 0xFFFFFFFF:08X}"
                 collection_file = os.path.join(base_dir, f"0x{hash_str}.{collection.name}.wrap{ext}")
                 
                 depsgraph = bpy.context.evaluated_depsgraph_get()
@@ -382,9 +382,10 @@ class CONVERT_OT_DDS_TEX(Operator):
 
         for file in self.files:
             filepath = os.path.join(self.directory, file.name)
-
+                       
             try:
-                Convert(filepath, DDS, TEX)
+                Convert(filepath)
+                
             except Exception as e:
                 self.report({'ERROR'}, f"{file.name}: {e}")
 
@@ -407,7 +408,137 @@ class DDS_TEX_FileHandler(FileHandler):
     def can_handle(cls, context, filepath):
         return filepath.lower().endswith((".dds", ".tex"))
         
+
+
+class PNG_TEX_FileHandler(FileHandler):
+    bl_idname = "PNG_TEX_FILEHANDLER"
+    bl_label = "Convert PNG/TEX Files(WOS)"
+    bl_import_operator = "import_scene.png_conversion_window"
+    bl_file_extensions = ".png"
+    
+    @classmethod
+    def poll_drop(cls, context):
+        return context.area and context.area.type == "VIEW_3D"
+    
+    @classmethod
+    def can_handle(cls, context, filepath):
+        return filepath.lower().endswith((".png"))
+
+
+class WM_OT_PNGConversionWindow(Operator):
+    bl_idname = "import_scene.png_conversion_window"
+    bl_label = "PNG Image Conversion (WoS)"
+    bl_description = "Convert PNG to WoS .wrap.tex"
+
+    compression: EnumProperty(
+        name="Compression",
+        description="Choose the compression format.",
+        items=[
+            ("dxt1", "DXT1", "BC1/DXT1 compression"),
+            ("dxt3", "DXT3", "BC2/DXT3 compression"),
+            ("dxt5", "DXT5", "BC3/DXT5 compression"),
+        ],
+        default="dxt5",
+    )
+
+    generate_mipmaps: BoolProperty(
+        name="Generate Mipmaps",
+        description="Check if you want to generate mipmaps.",
+        default=False,
+    )
+    
+    mipmap_count: StringProperty(
+        name="Mipmap Count",
+        description="Count of mipmap levels to add to the base one.",
+        default="0",
+    )
+    
+    # Filepath property
+    files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
+    directory: bpy.props.StringProperty(subtype="DIR_PATH")
         
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(
+            self,
+            width=1000
+        )
+
+    def draw(self, context):
+        layout = self.layout
+
+        layout.prop(self, "compression")
+        layout.prop(self, "generate_mipmaps")
+        layout.prop(self, "mipmap_count")
+        
+    def execute(self, context):
+        if not self.files:
+            self.report({'WARNING'}, "No files received")
+            return {'CANCELLED'}
+
+        for file in self.files:
+            filepath = os.path.join(self.directory, file.name)
+                       
+            try:
+                Convert(filepath, self.compression, self.generate_mipmaps, self.mipmap_count)
+                
+            except Exception as e:
+                self.report({'ERROR'}, f"{file.name}: {e}")
+
+        self.report({'INFO'}, f"Converted {len(self.files)} file(s)")
+        return {'FINISHED'}
+        
+        
+
+class CONVERT_OT_TEX_PNG(Operator):
+    """Drag and Drop PNG files to convert to TEX (WoS)"""
+    bl_idname = "import_scene.tex_to_png_convert"
+    bl_label = "TEX to PNG (WoS)"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    # Filepath property
+    files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
+    directory: bpy.props.StringProperty(subtype="DIR_PATH")
+
+    def execute(self, context):
+        if not self.files:
+            self.report({'WARNING'}, "No files received")
+            return {'CANCELLED'}
+
+        for file in self.files:
+            filepath = os.path.join(self.directory, file.name)
+                       
+            try:
+                ConvertTEXToPNG(filepath)
+                
+            except Exception as e:
+                self.report({'ERROR'}, f"{file.name}: {e}")
+
+        self.report({'INFO'}, f"Converted {len(self.files)} file(s)")
+        return {'FINISHED'}
+
+
+
+class TEX_PNG_FileHandler(FileHandler):
+    bl_idname = "TEX_PNG_FILEHANDLER"
+    bl_label = "Convert TEX to PNG (WoS)"
+    bl_import_operator = "import_scene.tex_to_png_convert"
+    bl_file_extensions = ".tex"
+    
+    @classmethod
+    def poll_drop(cls, context):
+        return context.area and context.area.type == "VIEW_3D"
+    
+    @classmethod
+    def can_handle(cls, context, filepath):
+        return filepath.lower().endswith((".tex"))
+
+
+
+
+
+# ----------------------------------------------------------------------
+
 # Custom Icons
 custom_icons = {}
 
@@ -456,7 +587,12 @@ classes = (
     CONVERT_OT_DDS_TEX,
     DDS_TEX_FileHandler,
     
+    WM_OT_PNGConversionWindow,
+    PNG_TEX_FileHandler,
     
+    CONVERT_OT_TEX_PNG,
+    TEX_PNG_FileHandler,
+ 
 )
 
 def register():

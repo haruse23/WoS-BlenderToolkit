@@ -132,10 +132,10 @@ class BlenderMeshExtractor:
             vidx = loop.vertex_index
             v = mesh.vertices[vidx]
 
-            matrix = obj.matrix_world
-            rot = matrix.to_3x3().normalized()
+            matrix = obj.matrix_world # Get the mesh object's world matrix
+            rot = matrix.to_3x3().normalized() # Get the rotation matrix from the world matrix, then remove scale
 
-            pos = matrix @ v.co # Apply all transforms to positions
+            pos =  v.co # Exporting local vertices, no applying of the world matrix
             normal = (rot @ loop.normal).normalized() # Apply rotation matrix to normals, after applying scale in Blender
             # No need for inverse-transpose matrix
 
