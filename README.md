@@ -73,6 +73,9 @@ Reasoning:
 Join the [Web of Shadows](https://discord.gg/KWNGgZBS9k) discord server for any questions
 
 # Changelog
+### vNewLatest
+- PNG/TEX Conversion Supported
+  
 ### 1.0.2
 - Fixed issues with TBN (Tangent, Bitangent, Normal) calculation and export from Blender
 - Fixed issues with axis orientation and handedness
