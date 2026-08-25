@@ -123,10 +123,13 @@ def Convert(Filepath, compression=None, generate_mipmaps=None, mipmap_count=None
             png_data = f.read()
             
         with Image(blob=png_data) as img:
-            img.compression = compression
+            img.options["dds:compression"] = compression
             
             if generate_mipmaps:
                 img.options["dds:mipmaps"] = mipmap_count
+            
+            else:
+                img.options["dds:mipmaps"] = "0"
                 
             dds = img.make_blob(format='dds') # Bytes object
             
