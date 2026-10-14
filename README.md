@@ -58,6 +58,11 @@ Reasoning:
   - However, the default export setting in this addon is to use Triangle List, which luckily the game can accept to consume if a certain field in the data is tweaked to a value of 4.
 
 - Apply scale to the model before exporting, toolkit handles applying the rest of tranforms
+
+- The game seems to have the models and skeletons originally flipped, so if you don't do these steps, your model looks flipped on the x-axis in-game. To fix:
+  	- Press S to Scale your model/meshes, then X, then -1
+  	- Apply scale from Ctrl + A, the toolkit doesn't do that automatically for you
+  	- In Edit Mode, Alt + N, then choose Flip to fix the Normals
 	
 #
 📦 Recommended Model Import Settings
