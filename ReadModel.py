@@ -130,7 +130,7 @@ def ReadModel(filepath):
             for __ in range(Mesh[2].dwIndexCount): # Mesh[2] is every mesh's mesh info
 
                 
-                index_buffer.ReadIndex(f, Mesh[2].dwVertexCount) # Mesh[2] is every mesh's mesh info
+                index_buffer.ReadIndex(f, Mesh[2].dwIndexSize) # Mesh[2] is every mesh's mesh info
                 
             Index_Buffers.append(index_buffer)
             print(f.tell())

@@ -6,6 +6,8 @@ from .Wrap import *
 
 from .Skeleton import *
 
+from .Morph import *
+
 from mathutils import Matrix, Vector, Quaternion
 import bpy
 import io
@@ -813,8 +815,293 @@ def ExportSkeleton(filepath, armature):
 
             
             
+def ExportMorph(filepath, collection):
+    with open(filepath, "wb") as out:
+        if collection is None:
+            raise ValueError("Collection is None!")
+        
+        needed_mesh = None
+        needed_mesh_index = None
+                   
+        mesh_objs = [obj for obj in collection.objects if obj.type == "MESH"]
+        
+        mesh_count = len(mesh_objs)
+        
+        needed_mesh = bpy.context.active_object
+        needed_mesh_index = mesh_objs.index(needed_mesh)
+                
+        
+        shapekey_count = len(needed_mesh.data.shape_keys.key_blocks)
+        
+        ############################################################
+        # Writing Wrap Section (Header)
+        wrap_header_start = out.tell()
+        
+        wrap_header = WRAPSectionHeader()
+        
+        wrap_header.dwMagic = 1346458199 # WRAP bytes in decimal, interpreted as 4-byte unsigned int
+        
+        wrap_header.dwPatchTablePointer = 0x18
+        
+        wrap_header.dwComponentCount = 1
+        wrap_header.dwComponentsPointer = 0x4
+       
+        
+        PatchTablePointerStart, IMGPointerStart, PHYSPointerStart = wrap_header.WriteWRAPSectionHeader(out)
+
+
+        # Writing WRAP Section (PatchTable)
+        wrap_patchtable_start = out.tell()
+        
+        wrap_patchtable = WRAPSectionPatchTable()
+        
+
+        wrap_patchtable.dwExternalPatchCount = 1
+        wrap_patchtable.dwExternalPatchPointer = 0x1C
+        
+        wrap_patchtable.dwInternalPatchCount = shapekey_count * 3
+        wrap_patchtable.dwGlobalPatchCount = 0
+        
+        ExternalPatchPointerStart, InternalPatchPointerStart, GlobalPatchPointerStart = wrap_patchtable.WriteWRAPSectionPatchTable(out)
+        
+        
+        # Writing WRAP Section (ExternalPatch)
+        wrap_external_start = out.tell()
+        
+        wrap_external = WRAPSectionExternalPatch()
+        
+        for _ in range(wrap_patchtable.dwExternalPatchCount):
+            wrap_external.WriteWRAPSectionExternalPatch(out)
+        
+        
+        # Writing WRAP Section (InternalPatch)
+        wrap_internal_start = out.tell()
+        
+        wrap_internal = WRAPSectionInternalPatch()
+        
+        for __ in range(wrap_patchtable.dwInternalPatchCount):
+            wrap_internal.WriteWRAPSectionInternalPatch(out)
+            
+        write_alignment_16_A1(out, out.tell())
+        
+        
+        ############################################################
+        
+        # Writing MorphHeader
+        morph_header_start = out.tell()     
+        
+        filename_hash = needed_mesh.data.shape_keys.key_blocks[1].name.split("_")[0]
+        
+        morph_header = MorphHeader()
+        
+        morph_header.FilenamePointer = 0
+        morph_header.FilenameHash = int(filename_hash)
+        morph_header.MorphTargetCount = shapekey_count
+        
+        morph_header.Write(out)
+        
+        
+        
+        # Writing MorphOffsetTable
+        morph_table = MorphOffsetTable()
+        
+        morph_table_start = out.tell()
+        
+        morph_table_offsets_start = []
+        for i in range(shapekey_count):
+            morph_table.unk = 1
+            morph_table.submesh_count = mesh_count
+            morph_table.MorphDataPointer = 0
+            
+            morph_table.Write(out)
+            
+            morph_table_offsets_start.append(morph_table.PointerPosition)
             
             
+            
+            
+            
+            
+        
+        # Writing MorphData
+        morph_data = MorphData()
+        
+        vertex_count = len(needed_mesh.data.vertices)
+        
+        # Model AABBMax
+        aabb_max = Vector((
+        float("-inf"),
+        float("-inf"),
+        float("-inf")
+        ))
+
+        for mesh_obj in mesh_objs:
+            for vertex in mesh_obj.data.vertices:
+                local_vertex = vertex.co
+
+                aabb_max.x = max(aabb_max.x, local_vertex.x)
+                aabb_max.y = max(aabb_max.y, local_vertex.y)
+                aabb_max.z = max(aabb_max.z, local_vertex.z)
+                
+                
+        keys = needed_mesh.data.shape_keys.key_blocks
+        basis = keys["Basis"]
+        
+        shapekeys_deltas = []
+        for key in keys:
+
+            shapekey_deltas = []
+
+            for i, point in enumerate(key.data):
+                delta = point.co - basis.data[i].co
+
+                shapekey_deltas.append((
+                    round(delta.x / aabb_max.x * 1024),
+                    round(delta.y / aabb_max.y * 1024),
+                    round(delta.z / aabb_max.z * 1024)
+                ))
+                
+            
+            shapekeys_deltas.append(shapekey_deltas)
+        
+        _rel_p1_starts = []
+        _rel_p2_starts = []
+        
+        morph_datablock_start = []
+        for i in range(shapekey_count):
+            morph_datablock_start.append(out.tell())
+            
+            for m in range(mesh_count):
+                if m == needed_mesh_index:
+                    if i == 0:
+                        write_uint(out, 0)
+                        
+                    else:
+                        write_uint(out, vertex_count)
+                        
+                    write_uint(out, 1)
+                    
+                    _rel_p1_starts.append(out.tell())
+                    write_uint(out, 4 + 12 * (mesh_count - m - 1))
+                    
+                    
+                else:
+                    out.write(b"\x00" * 12)
+                    
+                    
+                    
+            
+            write_uint64(out, 8) # DeltaStreamPointer
+            
+           
+            write_uint(out, 0)
+            if i == 0:
+                write_uint(out, 0)
+                continue
+                
+            else:
+                _rel_p2_starts.append(out.tell())
+                write_uint(out, 4)
+                
+            morph_data.Deltas = shapekeys_deltas[i]
+            
+            morph_data.Write(out, vertex_count)
+            
+            
+            
+        end_of_file = out.tell()
+            
+            
+            
+            
+        # Updating & Rewriting WRAP Section (Header)
+        out.seek(wrap_header_start)
+        
+        wrap_header.dwIMGSize = end_of_file - morph_header_start
+        wrap_header.dwIMGPointer = morph_header_start - IMGPointerStart
+
+        wrap_header.WriteWRAPSectionHeader(out)
+            
+        
+        # Updating & Rewriting WRAP Section (PatchTable)
+        out.seek(wrap_patchtable_start)
+        # ExternalPatchPointer is fixed -- 0x1C
+        
+        wrap_patchtable.dwInternalPatchPointer = wrap_internal_start - InternalPatchPointerStart
+        wrap_patchtable.dwGlobalPatchPointer = morph_header_start - GlobalPatchPointerStart
+        
+        wrap_patchtable.WriteWRAPSectionPatchTable(out)
+        
+        
+        # Updating & Rewriting WRAP Section (ExternalPatch)
+        out.seek(wrap_external_start)
+        
+        # NAME
+        wrap_external.dwPatchToTypeExternal = 1162690894 # NAME bytes in decimal, interpreted as 4-byte unsigned int
+        wrap_external.dwExternalFilenameHash = b"\x00\x00\x00\x00"
+        wrap_external.dwExpectedIndexExternal = 4294967295 # FF FF FF FF bytes in decimal, interpreted as 4-byte unsigned int
+        wrap_external.dwPointerTargetExternal = morph_header_start - wrap_external.PointerTargetExternalStartList[0]
+        
+        wrap_external.WriteWRAPSectionExternalPatch(out)
+        
+        
+        
+        # Updating & Rewriting WRAP Section (InternalPatch)
+        out.seek(wrap_internal_start)
+        
+        i = 0
+        wrap_internal.dwPointerTargetInternal = morph_header.PointerPosition - wrap_internal.PointerTargetInternalStartList[i]
+        i += 1
+        
+        wrap_internal.WriteWRAPSectionInternalPatch(out)
+        
+        for offset_start in morph_table_offsets_start:
+            wrap_internal.dwPointerTargetInternal = offset_start - wrap_internal.PointerTargetInternalStartList[i]
+            
+            i += 1
+            
+            wrap_internal.WriteWRAPSectionInternalPatch(out)
+        
+        # First p1 only (Basis)
+        s1 = _rel_p1_starts[0]
+
+        wrap_internal.dwPointerTargetInternal = (
+            s1 - wrap_internal.PointerTargetInternalStartList[i]
+        )
+        wrap_internal.WriteWRAPSectionInternalPatch(out)
+        i += 1
+
+        # Remaining p1/p2 pairs
+        for s1, s2 in zip(_rel_p1_starts[1:], _rel_p2_starts):
+            wrap_internal.dwPointerTargetInternal = (
+                s1 - wrap_internal.PointerTargetInternalStartList[i]
+            )
+            wrap_internal.WriteWRAPSectionInternalPatch(out)
+
+            wrap_internal.dwPointerTargetInternal = (
+                s2 - wrap_internal.PointerTargetInternalStartList[i + 1]
+            )
+            wrap_internal.WriteWRAPSectionInternalPatch(out)
+
+            i += 2
+
+        write_alignment_16_A1(out, out.tell())
+        
+        
+        
+        # Updating & Rewriting MorphOffsetTable
+        out.seek(morph_table_start)
+        
+        
+        for i in range(shapekey_count):
+            morph_table.unk = 1
+            morph_table.submesh_count = mesh_count
+            morph_table.MorphDataPointer = morph_datablock_start[i] - morph_table_offsets_start[i] 
+            
+            morph_table.Write(out)
+            
+            morph_table_offsets_start.append(morph_table.PointerPosition)
+        
             
             
             

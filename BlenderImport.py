@@ -2,11 +2,18 @@ from .ReadModel import *
 from .Skeleton import *
 from .get_string_lookup import *
 
+from .Morph import *
+from .ASKL import *
+from .ANIM import *
+
+
 import bpy
 import bmesh
 import math
 import os
 from mathutils import Matrix, Vector, Quaternion
+
+from pathlib import Path
 
 def ImportModel(filepath):
     ModelName = os.path.splitext(os.path.basename(filepath))[0]
@@ -54,55 +61,37 @@ def ImportModel(filepath):
                     
         
         # UVs
-        loop_uvs_per_channel = {}
-
         for channel, uv_data in Vertex_Buffers[m].TexCoords.items():
-            flat = []
+            flat_numbers = []
 
             for face in triangle_faces:
                 for v in face:
-                    flat.append(uv_data[v])  # vertex → uv
+                    u, vv = uv_data[v][0], uv_data[v][1]
 
-            loop_uvs_per_channel[channel] = flat
-                        
-        for channel, flat_uvs in loop_uvs_per_channel.items():
-            uv_layer = bm.loops.layers.uv.new(f"UVMap_{channel}")
+                    if scene.flip_uv_v_avis:
+                        vv = 1.0 - vv
 
-            i = 0
-            for face in bm.faces:
-                for loop in face.loops:
-                    loop[uv_layer].uv = flat_uvs[i]
-                    i += 1
-            
+                    flat_numbers.append(u)
+                    flat_numbers.append(vv)
+
+            uv_layer = mesh.uv_layers.new(name=f"UVMap_{channel}")
+            uv_layer.data.foreach_set("uv", flat_numbers)   # all corners at once
+
         # Colors
-        loop_colors_per_channel = {}
-
         for channel, color_data in Vertex_Buffers[m].Colors.items():
-            flat = []
+            flat_numbers = []
 
             for face in triangle_faces:
                 for v in face:
-                    flat.append(color_data[v])  # vertex → color
+                    c = color_data[v]
+                    flat_numbers.append(c[0])
+                    flat_numbers.append(c[1])
+                    flat_numbers.append(c[2])
+                    flat_numbers.append(c[3])
 
-            loop_colors_per_channel[channel] = flat
-                        
-        for channel, flat_colors in loop_colors_per_channel.items():
-            color_layer = bm.loops.layers.color.new(f"Col_{channel}")
-
-            i = 0
-            for face in bm.faces:
-                for loop in face.loops:
-                    loop[color_layer] = flat_colors[i]
-                    i += 1
+            color_layer = mesh.color_attributes.new(f"Col_{channel}", 'BYTE_COLOR', 'CORNER')
+            color_layer.data.foreach_set("color", flat_numbers)
            
-            
-        if scene.flip_uv_v_avis:
-            flip_uv_v_axis(bm)
-            
-        
-        bm.to_mesh(mesh)
-        bm.free()
-        
                 
                     
         # Normals
@@ -113,22 +102,37 @@ def ImportModel(filepath):
             if attr is None:
                     attr = mesh.attributes.new("custom_normal", 'FLOAT_VECTOR', 'POINT')
                 
-            for i, normal in enumerate(Normals):
-                attr.data[i].vector = normal
+            flat_numbers = []
+            for normal in Normals:
+                flat_numbers.append(normal[0])
+                flat_numbers.append(normal[1])
+                flat_numbers.append(normal[2])
+
+            attr.data.foreach_set("vector", flat_numbers)    # all vertices at once
         
            
         # Create all vertex groups
+        vertex_groups = {}
         for i in Mesh[3]:
-            obj.vertex_groups.new(name=f"bone_{i}")
+            vertex_groups[i] = obj.vertex_groups.new(name=f"bone_{i}")
 
-        
-        
+        # First collect: (bone, weight) -> list of vertices
+        weight_batches = {}
+
         for v_idx, (indices, weights) in enumerate(zip(Vertex_Buffers[m].BlendIndices, Vertex_Buffers[m].BlendWeights)):
             for palette_index, w in zip(indices, weights):
+                if w != 0:
                     bone_idx = Mesh[3][palette_index] # Bone index from the palette
-                    
-                    if w != 0:
-                        obj.vertex_groups[f"bone_{bone_idx}"].add([v_idx], w, 'REPLACE')
+
+                    batch_key = (bone_idx, w)
+                    if batch_key not in weight_batches:
+                        weight_batches[batch_key] = []
+
+                    weight_batches[batch_key].append(v_idx)
+
+        # Then add each list with ONE call
+        for (bone_idx, w), vertex_list in weight_batches.items():
+            vertex_groups[bone_idx].add(vertex_list, w, 'REPLACE')
 
         
         
@@ -263,5 +267,238 @@ def ImportSkeleton(filepath):
             
     bpy.context.view_layer.update()          
     bpy.ops.object.mode_set(mode='OBJECT')
+    
+    
+    
+    
+    
+    
+    
+def ImportMorph(filepath):
+    filename_hash, submeshes_vert_count, morphs = ReadMorph(filepath)
+  
+    morh_name = Path(filepath).name.split(".", 1)[1].rsplit(".", 2)[0] # e.g.: 0xD18DAA59.ch_spiderman_rvbigc000.wrap.morh
+    
+    mesh_collection = bpy.data.collections.get(morh_name)
+    
+    mesh_objs = [obj for obj in mesh_collection.objects if obj.type == "MESH"]
+
+
+    obj = None
+    
+    aabb_max = Vector((
+        float("-inf"),
+        float("-inf"),
+        float("-inf")
+    ))
+
+    for mesh_obj in mesh_objs:
+        for vertex in mesh_obj.data.vertices:
+            local_vertex = vertex.co
+
+            aabb_max.x = max(aabb_max.x, local_vertex.x)
+            aabb_max.y = max(aabb_max.y, local_vertex.y)
+            aabb_max.z = max(aabb_max.z, local_vertex.z)
+        
+        
+    for i, morph_deltas in enumerate(morphs):
+
+        obj = bpy.context.active_object
+        
+        # Create Basis first
+        if i == 0: # Only make Basis one time before first Morph
+            obj.shape_key_add(name="Basis", from_mix=False)
+    
+        
+        # Create the new shape key
+        key = obj.shape_key_add(name=f"{filename_hash}_Morph_{i+1}", from_mix=False)
+        key.value = 0.0
+            
+        # Fill its vertex positions
+        vertices = obj.data.vertices
+        
+        for delta in morph_deltas:
+            for vertex_index, values in delta.items():
+                position_x = vertices[vertex_index].co.x + values[0] / 1024 * aabb_max[0]
+                position_y = vertices[vertex_index].co.y + values[1] / 1024 * aabb_max[1]
+                position_z = vertices[vertex_index].co.z + values[2] / 1024 * aabb_max[2]
+
+                key.data[vertex_index].co = Vector((
+                    position_x,
+                    position_y,
+                    position_z
+                ))
+                
+        all_zero = all(
+            vertex.co.length == 0
+            for vertex in key.data
+        )
+        
+        if all_zero:
+            key.name = key.name + "_Empty"
+
+            
+            
+            
+    
+    
+
+
+def ImportASKL(filepath):
+    SkeletonName = os.path.splitext(os.path.basename(filepath))[0]
+    
+    SkeletonName = SkeletonName.rsplit(".")[1]
+    
+    Bones, positions_bones, rotations_bones, hinges_bones, default_tracks = ReadASKL(filepath)
+    
+    
+    ##############################################
+    arm_data = bpy.data.armatures.new(SkeletonName)
+    arm_object = bpy.data.objects.new(SkeletonName, arm_data)
+    bpy.context.collection.objects.link(arm_object)
+    bpy.context.view_layer.objects.active = arm_object
+    bpy.ops.object.mode_set(mode='EDIT')
+        
+    
+    for i, bone in enumerate(Bones):
+        edit_bone = arm_data.edit_bones.new(bone["Name"])
+        
+        pos = Vector(bone["Position"])
+        
+        x, y, z, w = bone["Rotation"]                
+        rot = Quaternion((w, x, y, z))  
+                                        
+        scale = Vector((1, 1, 1))
+        
+        matrix = Matrix.LocRotScale(pos, rot, scale)
+        
+        
+        edit_bone.head = Vector((0.0, 0.0, 0.0))
+        
+        edit_bone.tail = Vector((0.0, 0.1, 0.0))
+        
+        edit_bone.matrix = matrix
+        
+        
+    
+    for i, edit_bone in enumerate(arm_data.edit_bones):
+        parent_index = Bones[i]["Parent_Index"]
+        
+        if not parent_index == -1:
+            edit_bone.parent = arm_data.edit_bones[parent_index]
+            
+            
+    
+    for edit_bone in arm_data.edit_bones:
+    
+        if edit_bone.parent:
+            edit_bone.matrix = edit_bone.parent.matrix @ edit_bone.matrix
+        
+    
+    
+    bpy.context.view_layer.update()          
+    bpy.ops.object.mode_set(mode='OBJECT')
+    
+    
+def bone_pose_for_frame(tracks, askl_object):
+    n = len(askl_object.Bones)
+
+    # start: bind pose from the bone records
+    rot = []
+    pos = []
+    for b in askl_object.Bones:
+        x, y, z, w = b["Rotation"]                   # record +0x10
+        rot.append(Quaternion((w, -x, -y, -z)))    # Blender convention
+        pos.append(Vector(b["Position"][:3]))         # record +0x20
+    bind_rot = [q.copy() for q in rot]
+
+    # position tracks → translation
+    for i, bone in enumerate(askl_object.positions_list):        # list at askl_object 0x38
+        if (0, i) in tracks:
+            pos[bone] = Vector(tracks[(0, i)])
+
+    # quaternion tracks → rotation (replaces bind)
+    for i, bone in enumerate(askl_object.rotations_list):       # list at askl_object 0x3C
+        if (1, i) in tracks:
+            x, y, z, w = tracks[(1, i)]
+            rot[bone] = Quaternion((w, -x, -y, -z)).normalized()
+
+    # hinge tracks → angle around the bone's axis, on top of bind
+    for i, bone in enumerate(askl_object.hinges_list):      # list at askl_object 0x40
+        if (2, i) in tracks:
+            a = tracks[(2, i)][0]
+            ax = askl_object.Bones[bone]["Hinge"]               # record +0x00
+            s = math.sin(a / 2)
+            hinge = Quaternion((math.cos(a / 2), ax[0]*s, ax[1]*s, ax[2]*s))
+            rot[bone] = hinge @ bind_rot[bone]
+
+    return rot, pos
+    
+    
+def rest_local(bone):
+    if bone.parent:
+        return bone.parent.matrix_local.inverted() @ bone.matrix_local
+    return bone.matrix_local.copy()
+    
+    
+def apply_animation(arm_obj, askl_object, anim_name, frames_tracks, frame_time):
+    name_to_index = {b["Name"]: i for i, b in enumerate(askl_object.Bones)}
+
+    targets = []
+    for pb in arm_obj.pose.bones:
+        i = name_to_index.get(pb.name)
+        if i is None:
+            continue
+        pb.rotation_mode = 'QUATERNION'
+        targets.append((pb, i, rest_local(pb.bone).inverted()))
+
+    action = bpy.data.actions.new(anim_name)
+    arm_obj.animation_data_create()
+    arm_obj.animation_data.action = action
+    
+    
+    
+    last_q = {}
+    scene = bpy.context.scene
+    for f, tracks in enumerate(frames_tracks):
+        rot, pos = bone_pose_for_frame(tracks, askl_object)
+        for pb, i, rest_inv in targets:
+            fakeroot = name_to_index.get("fakeroot")
+
+            local = Matrix.LocRotScale(pos[i], rot[i], None)
+
+            if scene.root_motion and fakeroot is not None and pb.parent is None and pb.name != "fakeroot":
+                fr = Matrix.LocRotScale(pos[fakeroot], rot[fakeroot], None)
+                local = fr @ local                             # carry the body along
+
+            basis = rest_inv @ local
+            loc, q, scl = basis.decompose()
+
+            if pb.name in last_q and last_q[pb.name].dot(q) < 0:
+                q.negate()                            # no long-way-round spins
+            last_q[pb.name] = q
+
+            pb.location = loc
+            pb.rotation_quaternion = q
+            pb.keyframe_insert("location", frame=f + 1)
+            pb.keyframe_insert("rotation_quaternion", frame=f + 1)
+
+    scn = bpy.context.scene
+    scn.render.fps = round(1 / frame_time)            # 30
+    scn.frame_start = 1
+    scn.frame_end = len(frames_tracks)
+    
+    
+
+def ImportANIM(filepath):
+    anim_object, askl_object, frames_tracks = ReadANIM(filepath)
+
+    arm_obj = bpy.context.active_object # User needs to select the armature before import
+    
+    anim_name = os.path.splitext(os.path.basename(filepath))[0]
+    
+    anim_name = anim_name.rsplit(".")[1]
+    
+    apply_animation(arm_obj, askl_object, anim_name, frames_tracks, anim_object.frame_time)
     
     

@@ -17,6 +17,9 @@ def read_vertex_position_short(f):
 
 def read_uint(f):
     return struct.unpack("<I", f.read(4))[0]
+    
+def read_uint64(f):
+    return struct.unpack("<Q", f.read(8))[0]
 
 def read_int(f):
     return struct.unpack("<i", f.read(4))[0]
@@ -112,8 +115,14 @@ def write_uint(f, data):
 def write_int(f, data):
     f.write(struct.pack("<i", data))
     
+def write_uint64(f, data):
+    f.write(struct.pack("<Q", data))
+    
 def write_ushort(f, data):
     f.write(struct.pack("<H", data))
+    
+def write_short(f, data):
+    f.write(struct.pack("<h", data))
     
 def write_float(f, data):
     f.write(struct.pack("<f", data))
@@ -237,16 +246,12 @@ def FetchAndReadDataType(f, DataType):
 
 
     if DataType == 15:
-        value1 = convert_half_float_to_float_numpy(f.read(2))
-        value2 = convert_half_float_to_float_numpy(f.read(2))
+        value1, value2 = struct.unpack("<2e", f.read(4))
         
         return (value1, value2)
     
     if DataType == 16:
-        value1 = convert_half_float_to_float_numpy(f.read(2))
-        value2 = convert_half_float_to_float_numpy(f.read(2))
-        value3 = convert_half_float_to_float_numpy(f.read(2))
-        value4 = convert_half_float_to_float_numpy(f.read(2))
+        value1, value2, value3, value4 = struct.unpack("<4e", f.read(8))
         
         return (value1, value2, value3, value4)
     
@@ -382,7 +387,7 @@ def FetchBlenderData(mesh_objects):
             add(16, 6, 0, 8)
 
         if attribute_exists(mesh_dict["positions"]):
-            add(3, 0, 0, 16)
+            add(10, 0, 0, 8)
 
         if attribute_exists(mesh_dict["normals"]):
             add(16, 3, 0, 8)

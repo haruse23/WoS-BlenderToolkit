@@ -352,7 +352,9 @@ class IMPORT_MT_WoS(Menu):
     def draw(self, context):
         self.layout.operator(IMPORT_OT_Mesh_File_View.bl_idname, text="Wrapped Model (WOS)", icon="MESH_DATA")
         self.layout.operator(IMPORT_OT_Skeleton_File_View.bl_idname, text="Wrapped Skeleton (WOS)", icon="ARMATURE_DATA")
-        
+        self.layout.operator(IMPORT_OT_Morph_File_View.bl_idname, text="Wrapped Morph (WOS)", icon="SHAPEKEY_DATA")
+        self.layout.operator(IMPORT_OT_ASKL_File_View.bl_idname, text="Wrapped ASKL (WOS)", icon="ARMATURE_DATA")
+        self.layout.operator(IMPORT_OT_ANIM_File_View.bl_idname, text="Wrapped Animation (WOS)", icon="ACTION")
 
 class EXPORT_MT_WoS(Menu):
     bl_label = "WOS Blender Addon"
@@ -361,6 +363,7 @@ class EXPORT_MT_WoS(Menu):
     def draw(self, context):
         self.layout.operator(EXPORT_OT_Mesh.bl_idname, text="Wrapped Model (WOS)", icon="MESH_DATA")
         self.layout.operator(EXPORT_OT_Skeleton.bl_idname, text="Wrapped Skeleton (WOS)", icon="ARMATURE_DATA")
+        self.layout.operator(EXPORT_OT_Morph.bl_idname, text="Wrapped Morph (WOS)", icon="SHAPEKEY_DATA")
 
 
 # Textures
@@ -538,6 +541,293 @@ class TEX_PNG_FileHandler(FileHandler):
 
 
 # ----------------------------------------------------------------------
+class IMPORT_OT_Morph_File_View(Operator):
+    bl_idname = "import_scene.smwos_morph_importer_file_view"
+    bl_label = "Import Wrap Morph File (WOS)"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    filename_ext = ".morh"
+    
+    filter_glob: StringProperty(default="*.morh", options={'HIDDEN'},)
+    
+    # Filepath property
+    files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
+    directory: StringProperty(subtype="DIR_PATH")
+    
+    def execute(self, context):
+        if not self.files:
+            self.report({'WARNING'}, "No files received")
+            return {'CANCELLED'}
+
+        for file in self.files:
+            filepath = os.path.join(self.directory, file.name)
+
+            try:
+                ImportMorph(filepath)
+            except Exception as e:
+                self.report({'ERROR'}, f"{file.name}: {e}")
+
+        self.report({'INFO'}, f"Imported {len(self.files)} file(s)")
+        return {'FINISHED'}
+        
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        
+        return {'RUNNING_MODAL'}
+        
+class IMPORT_OT_Morph_Drag_and_Drop(Operator):
+    bl_idname = "import_scene.smwos_morph_importer_drag_and_drop"
+    bl_label = "Import Wrap Morph File (WOS)"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    # Filepath property
+    files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
+    directory: bpy.props.StringProperty(subtype="DIR_PATH")
+
+    def execute(self, context):
+        if not self.files:
+            self.report({'WARNING'}, "No files received")
+            return {'CANCELLED'}
+
+        for file in self.files:
+            filepath = os.path.join(self.directory, file.name)
+
+            try:
+                ImportMorph(filepath)
+            except Exception as e:
+                self.report({'ERROR'}, f"{file.name}: {e}")
+
+        self.report({'INFO'}, f"Imported {len(self.files)} file(s)")
+        return {'FINISHED'}
+    
+
+
+class Morph_FileHandler(FileHandler):
+    bl_idname = "MORPH_FILEHANDLER"
+    bl_label = "Import Morph File (WOS)"
+    bl_import_operator = "import_scene.smwos_morph_importer_drag_and_drop"
+    bl_file_extensions = ".morh"
+    
+    @classmethod
+    def poll_drop(cls, context):
+        return context.area and context.area.type == "VIEW_3D"
+        
+        
+        
+        
+class EXPORT_OT_Morph(Operator, ExportHelper):
+    bl_idname = "export_scene.smwos_morph_exporter"
+    bl_label = "Export Wrap Morph File (WOS)"
+    bl_options = {'PRESET'}
+    
+    filename_ext = ".morh"
+    
+    filter_glob: StringProperty(default="*.morh", options={'HIDDEN'},)
+    
+    def invoke(self, context, event):
+        populate_collections()  # populate checkbox list
+        return super().invoke(context, event)
+    
+    
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        
+        layout.label(text="Collections:")
+        for item in scene.export_collections:
+            
+            layout.prop(item, "export", text=item.name)
+            
+    def execute(self, context):
+        scene = context.scene
+        base_dir = os.path.dirname(self.filepath)
+        filename = os.path.basename(self.filepath)
+        name, ext = os.path.splitext(filename)
+
+        exported_count = 0
+        for item in scene.export_collections:
+            if item.export:
+                collection = bpy.data.collections.get(item.name)
+                
+                # Hash prepended filename
+                hash_int = Hash(collection.name)
+                hash_str = f"{hash_int & 0xFFFFFFFF:08X}"
+                collection_file = os.path.join(base_dir, f"0x{hash_str}.{collection.name}.wrap{ext}")
+                
+                # Export each collection to its own file
+                ExportMorph(collection_file, collection)
+                exported_count += 1
+
+        self.report({'INFO'}, f"Exported {exported_count} collections")
+        return {'FINISHED'}
+        
+        
+        
+        
+        
+        
+
+
+# ----------------------------------------------------------------------
+class IMPORT_OT_ASKL_File_View(Operator):
+    bl_idname = "import_scene.smwos_askl_importer_file_view"
+    bl_label = "Import Wrap ASKL File (WOS)"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    filename_ext = ".askl"
+    
+    filter_glob: StringProperty(default="*.askl", options={'HIDDEN'},)
+    
+    # Filepath property
+    files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
+    directory: StringProperty(subtype="DIR_PATH")
+    
+    def execute(self, context):
+        if not self.files:
+            self.report({'WARNING'}, "No files received")
+            return {'CANCELLED'}
+
+        for file in self.files:
+            filepath = os.path.join(self.directory, file.name)
+
+            try:
+                ImportASKL(filepath)
+            except Exception as e:
+                self.report({'ERROR'}, f"{file.name}: {e}")
+
+        self.report({'INFO'}, f"Imported {len(self.files)} file(s)")
+        return {'FINISHED'}
+        
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        
+        return {'RUNNING_MODAL'}
+        
+        
+class IMPORT_OT_ASKL_Drag_and_Drop(Operator):
+    bl_idname = "import_scene.smwos_askl_importer_drag_and_drop"
+    bl_label = "Import Wrap ASKL File (WOS)"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    # Filepath property
+    files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
+    directory: bpy.props.StringProperty(subtype="DIR_PATH")
+
+    def execute(self, context):
+        if not self.files:
+            self.report({'WARNING'}, "No files received")
+            return {'CANCELLED'}
+
+        for file in self.files:
+            filepath = os.path.join(self.directory, file.name)
+
+            try:
+                ImportASKL(filepath)
+            except Exception as e:
+                self.report({'ERROR'}, f"{file.name}: {e}")
+
+        self.report({'INFO'}, f"Imported {len(self.files)} file(s)")
+        return {'FINISHED'}
+    
+
+
+class ASKL_FileHandler(FileHandler):
+    bl_idname = "ASKL_FILEHANDLER"
+    bl_label = "Import ASKL File (WOS)"
+    bl_import_operator = "import_scene.smwos_askl_importer_drag_and_drop"
+    bl_file_extensions = ".askl"
+    
+    @classmethod
+    def poll_drop(cls, context):
+        return context.area and context.area.type == "VIEW_3D"
+
+
+# ----------------------------------------------------------------------
+
+
+
+
+class IMPORT_OT_ANIM_File_View(Operator):
+    bl_idname = "import_scene.smwos_anim_importer_file_view"
+    bl_label = "Import Wrapped Animation File (WOS)"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    filename_ext = ".anim"
+    
+    filter_glob: StringProperty(default="*.anim", options={'HIDDEN'},)
+    
+    # Filepath property
+    files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
+    directory: StringProperty(subtype="DIR_PATH")
+    
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        
+        layout.label(text="Import Options")
+        layout.prop(scene, "root_motion")
+        
+    def execute(self, context):
+        if not self.files:
+            self.report({'WARNING'}, "No files received")
+            return {'CANCELLED'}
+
+        for file in self.files:
+            filepath = os.path.join(self.directory, file.name)
+
+            try:
+                ImportANIM(filepath)
+            except Exception as e:
+                self.report({'ERROR'}, f"{file.name}: {e}")
+
+        self.report({'INFO'}, f"Imported {len(self.files)} file(s)")
+        return {'FINISHED'}
+        
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        
+        return {'RUNNING_MODAL'}
+        
+        
+class IMPORT_OT_ANIM_Drag_and_Drop(Operator):
+    bl_idname = "import_scene.smwos_anim_importer_drag_and_drop"
+    bl_label = "Import Wrapped Animation File (WOS)"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    # Filepath property
+    files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
+    directory: bpy.props.StringProperty(subtype="DIR_PATH")
+
+    def execute(self, context):
+        if not self.files:
+            self.report({'WARNING'}, "No files received")
+            return {'CANCELLED'}
+
+        for file in self.files:
+            filepath = os.path.join(self.directory, file.name)
+
+            try:
+                ImportANIM(filepath)
+            except Exception as e:
+                self.report({'ERROR'}, f"{file.name}: {e}")
+
+        self.report({'INFO'}, f"Imported {len(self.files)} file(s)")
+        return {'FINISHED'}
+    
+
+
+class ANIM_FileHandler(FileHandler):
+    bl_idname = "ANIM_FILEHANDLER"
+    bl_label = "Import Wrapped Animation File (WOS)"
+    bl_import_operator = "import_scene.smwos_anim_importer_drag_and_drop"
+    bl_file_extensions = ".anim"
+    
+    @classmethod
+    def poll_drop(cls, context):
+        return context.area and context.area.type == "VIEW_3D"
+
+
+# ----------------------------------------------------------------------
 
 # Custom Icons
 custom_icons = {}
@@ -592,6 +882,19 @@ classes = (
     
     CONVERT_OT_TEX_PNG,
     TEX_PNG_FileHandler,
+    
+    IMPORT_OT_Morph_File_View,
+    IMPORT_OT_Morph_Drag_and_Drop,
+    Morph_FileHandler,
+    EXPORT_OT_Morph,
+    
+    IMPORT_OT_ASKL_File_View,
+    IMPORT_OT_ASKL_Drag_and_Drop,
+    ASKL_FileHandler,
+    
+    IMPORT_OT_ANIM_File_View,
+    IMPORT_OT_ANIM_Drag_and_Drop,
+    ANIM_FileHandler,
  
 )
 
@@ -625,6 +928,12 @@ def register():
         default=False
     )
     
+    bpy.types.Scene.root_motion = bpy.props.BoolProperty(
+        name="Import fakeroot motion",
+        default=False
+    )
+    
+    
     RegisterCustomIcon()
     
    
@@ -651,6 +960,9 @@ def unregister():
     
     if hasattr(bpy.types.Scene, "convert_to_triangle_list"):
         del bpy.types.Scene.convert_to_triangle_list
+        
+    if hasattr(bpy.types.Scene, "root_motion"):
+        del bpy.types.Scene.root_motion
 
     for cls in reversed(classes):
         try:

@@ -6,7 +6,7 @@ from .DDS import *
 from .TEX import *
 
 # Use Wand Library
-from wand.image import Image
+# from wand.image import Image
 
 from io import BytesIO
 

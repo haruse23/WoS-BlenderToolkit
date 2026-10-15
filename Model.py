@@ -446,9 +446,6 @@ class VertexAttribute:
             
             blendweight_tuple = blendweight_data[:4]
             
-            with open("blendweight_log.txt", "a") as test:
-                test.write(str(sum(blendweight_tuple)) + "\n")
-            
             self.Buffer.BlendWeights.append(blendweight_tuple)
             
         if self.Usage == "BLENDINDICES":
@@ -501,37 +498,31 @@ class VertexAttribute:
                 
                 
     def WriteVertexAttribute(self, f, vertex_count, positions, normals, tangents, binormals, uvs, colors, blend_indices, blend_weights, ModelBBox, BonePaletteCount):
-
+        has_uvs = attribute_exists(uvs)
+        has_tangents = attribute_exists(tangents)
+        has_positions = attribute_exists(positions)
+        has_normals = attribute_exists(normals)
+        has_colors = attribute_exists(colors)
+        has_binormals = attribute_exists(binormals)
+        
         for i in range(vertex_count):
-            if attribute_exists(uvs):
+            if has_uvs:
                   for j in range(len(uvs[i])):  # each UV channel
                     UV = uvs[i][j]
         
                     u = UV[0]
                     v = UV[1]
                   
-                    u = convert_float_to_half_float_numpy(u)
-                    v = convert_float_to_half_float_numpy(v)
+                    
+                    f.write(struct.pack("<2e", u, v)) 
                   
-                    f.write(u + v)
-                  
-            if attribute_exists(tangents):
+            if has_tangents:
                   T = tangents[i]
                   
-                  tx = T.x
-                  ty = T.y
-                  tz = T.z
-                  tw = 0
                   
-                  tx = convert_float_to_half_float_numpy(tx)
-                  ty = convert_float_to_half_float_numpy(ty)
-                  tz = convert_float_to_half_float_numpy(tz)
-                  tw = convert_float_to_half_float_numpy(tw)
-
-                  
-                  f.write(tx + ty + tz + tw)
+                  f.write(struct.pack("<4e", T.x, T.y, T.z, 0.0)) 
               
-            if attribute_exists(positions):
+            if has_positions:
                   ModelBBoxX = ModelBBox[0]
                   ModelBBoxY = ModelBBox[1]
                   ModelBBoxZ = ModelBBox[2]
@@ -549,7 +540,7 @@ class VertexAttribute:
                   pz = pz / ModelBBoxZ
                   pw = 0
                   
-                  """px = px * 32767
+                  px = px * 32767
                   py = py * 32767
                   pz = pz * 32767
                   pw = 0
@@ -557,24 +548,14 @@ class VertexAttribute:
                   px = int(round(px))
                   py = int(round(py))
                   pz = int(round(pz))
-                  pw = int(round(pw))"""
+                  pw = int(round(pw))
                   
-                  f.write(struct.pack("<4f", px, py, pz, pw))
+                  f.write(struct.pack("<4h", px, py, pz, pw))
               
-            if attribute_exists(normals):
+            if has_normals:
                   N = normals[i]
                   
-                  nx = N.x
-                  ny = N.y
-                  nz = N.z
-                  nw = 0.0
-                  
-                  nx = convert_float_to_half_float_numpy(nx)
-                  ny = convert_float_to_half_float_numpy(ny)
-                  nz = convert_float_to_half_float_numpy(nz)
-                  nw = convert_float_to_half_float_numpy(nw)
-                  
-                  f.write(nx + ny + nz + nw)
+                  f.write(struct.pack("<4e", N.x, N.y, N.z, 0.0)) 
               
               
             
@@ -585,7 +566,7 @@ class VertexAttribute:
           
               
               
-            if attribute_exists(colors):
+            if has_colors:
                   for j in range(len(colors[i])):  # each Color channel
                     C = colors[i][j]
                   
@@ -649,20 +630,11 @@ class VertexAttribute:
               
               
               
-            if attribute_exists(binormals):
+            if has_binormals:
                   B = binormals[i]
                   
-                  bnx = B.x
-                  bny = B.y
-                  bnz = B.z
-                  bnw = 0
+                  f.write(struct.pack("<4e", B.x, B.y, B.z, 0.0)) 
                   
-                  bnx = convert_float_to_half_float_numpy(bnx)
-                  bny = convert_float_to_half_float_numpy(bny)
-                  bnz = convert_float_to_half_float_numpy(bnz)
-                  bnw = convert_float_to_half_float_numpy(bnw)
-                  
-                  f.write(bnx + bny + bnz + bnw)
               
               
               
@@ -683,12 +655,12 @@ class IndexBuffer():
         
         
         
-    def ReadIndex(self, f, VertexCount):
-        if VertexCount > 65535:
-            self.Index = read_uint(f)
+    def ReadIndex(self, f, IndexSize):
+        if IndexSize == 2:
+            self.Index = read_ushort(f)
             
         else:
-            self.Index = read_ushort(f)
+            self.Index = read_uint(f)
         self.Indices.append(self.Index)
         
     
