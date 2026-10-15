@@ -88,7 +88,8 @@ Join the [Web of Shadows](https://discord.gg/KWNGgZBS9k) discord server for any 
 - Morphs (Shapekeys) support (.wrap.morh) -> Import / Export
 - Animated Skeletons support (.wrap.askl) -> Import
 - Animations support (.wrap.anim) -> Import
-
+- Enhanced model import/export speed
+  
 ### vNewLatest
 - PNG/TEX Conversion Supported
   
