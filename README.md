@@ -13,10 +13,11 @@ and it could very possibly work on other untested versions of Blender, especiall
 - Import/Export the game's skeleton format (.wrap.skel) to Blender (drag-and-drop supported for import)
 
 - Convert the game's texture format (.wrap.tex) to DDS/PNG and vice versa (drag-and-drop feature)
-
-    - PNG/TEX Conversion requires installing [ImageMagick](https://docs.wand-py.org/en/latest/guide/install.html#install-imagemagick-on-windows)
-	- Also installing Wand python library in your Blender's python environment, e.g.:
-
+ 	- If you want PNG/TEX conversion functionality, un-comment this line in `Convert.py`:
+ 
+     	`# from wand.image import Image`
+    - PNG/TEX Conversion requires installing [ImageMagick](https://docs.wand-py.org/en/latest/guide/install.html#install-imagemagick-on-windows) and also installing Wand 			python library in your Blender's python environment, e.g.:
+      
         `"E:\Blender 5.0\5.0\python\bin\python.exe" -m pip install Wand`
 
 Use latest version of kirbystealer's [WebOfShadowsTools](https://github.com/kirbystealer/WebOfShadowsTools) or Devryx's [Toolkit](https://github.com/Devryx505/web-of-shadows-tools-wos-tools-) to extract said files
@@ -83,6 +84,11 @@ Reasoning:
 Join the [Web of Shadows](https://discord.gg/KWNGgZBS9k) discord server for any questions
 
 # Changelog
+### vNewLatest.0.1
+- Morphs (Shapekeys) support (.wrap.morh) -> Import / Export
+- Animated Skeletons support (.wrap.askl) -> Import
+- Animations support (.wrap.anim) -> Import
+
 ### vNewLatest
 - PNG/TEX Conversion Supported
   
